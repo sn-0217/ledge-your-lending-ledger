@@ -37,6 +37,17 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
   const [notes, setNotes] = useState(chitti?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
+  const [availed, setAvailed] = useState(chitti?.availed ?? false);
+  const [availedDate, setAvailedDate] = useState(() => {
+    if (chitti?.availedDate) {
+      return new Date(chitti.availedDate).toISOString().slice(0, 10);
+    }
+    return new Date().toISOString().slice(0, 10);
+  });
+  const [availedAmount, setAvailedAmount] = useState(
+    chitti?.availedAmount ? String(chitti.availedAmount) : ""
+  );
+
   const monthly = (Number(monthlyAmount) || 0) * (Number(numChits) || 1);
 
   async function submit() {
@@ -52,6 +63,8 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
     try {
       const [y, mo] = startDate.split("-").map(Number);
       const startTimestamp = new Date(y, mo - 1, 1).getTime();
+      const availedTimestamp = availed ? new Date(availedDate).getTime() : undefined;
+      const availedAmtNum = availed && availedAmount ? Number(availedAmount) : undefined;
 
       if (chitti) {
         // Edit flow
@@ -62,6 +75,9 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
           numChits: n,
           startDate: startTimestamp,
           totalMonths: m,
+          availed,
+          availedDate: availedTimestamp,
+          availedAmount: availedAmtNum,
           notes: notes.trim() || undefined,
         });
         toast.success("Chitti updated!");
@@ -74,6 +90,9 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
           numChits: n,
           startDate: startTimestamp,
           totalMonths: m,
+          availed,
+          availedDate: availedTimestamp,
+          availedAmount: availedAmtNum,
           notes: notes.trim() || undefined,
         });
         toast.success("Chitti added!");
@@ -173,6 +192,44 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
           )}
         </div>
       )}
+
+      {/* Availed Status */}
+      <div className="space-y-2 border-t border-border/40 pt-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={availed}
+            onChange={(e) => setAvailed(e.target.checked)}
+            className="rounded bg-secondary border-border text-primary focus:ring-primary h-4 w-4"
+          />
+          <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
+            Availed / Received lump-sum amount?
+          </span>
+        </label>
+
+        {availed && (
+          <div className="grid grid-cols-2 gap-3 pl-6">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Availed Date</label>
+              <Input
+                type="date"
+                value={availedDate}
+                onChange={(e) => setAvailedDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Availed Amount <span className="opacity-50">(optional)</span></label>
+              <Input
+                type="number"
+                placeholder="Lump-sum received"
+                inputMode="numeric"
+                value={availedAmount}
+                onChange={(e) => setAvailedAmount(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Notes */}
       <div className="space-y-1">

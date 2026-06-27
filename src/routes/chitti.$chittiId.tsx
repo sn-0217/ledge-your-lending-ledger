@@ -8,12 +8,12 @@ import { WebModal } from "@/components/common/WebModal";
 import { useChitti, useChittiPayments } from "@/lib/chittiQueries";
 import { usePeople } from "@/lib/queries";
 import {
-  setMonthPaid, updateAvailed, updateChittiStatus, deleteChitti,
+  recordPayment, deletePayment, updateAvailed, updateChittiStatus, deleteChitti,
 } from "@/lib/chittiRepositories";
 import { useFormatMoney, initials } from "@/lib/formatters";
 import {
   ArrowLeft, Check, Trophy, Trash2, CheckCircle2, Clock, XCircle,
-  ChevronDown, ChevronUp, CalendarCheck, Pencil,
+  Pencil, Calendar, PlusCircle, Trash, AlertCircle, CalendarCheck
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -29,7 +29,7 @@ import { useMemo, useState } from "react";
 import { ChittiForm } from "@/components/forms/ChittiForm";
 
 export const Route = createFileRoute("/chitti/$chittiId")({
-  head: () => ({ meta: [{ title: "Chitti — Ledge" }] }),
+  head: () => ({ meta: [{ title: "Chitti Details — Ledge" }] }),
   component: () => (
     <AppShell>
       <ClientOnly>
@@ -54,17 +54,28 @@ function ChittiDetail() {
   const fmt = useFormatMoney();
 
   const [editing, setEditing] = useState(false);
-  const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
   const [availedModal, setAvailedModal] = useState(false);
   const [availedDate, setAvailedDate] = useState(new Date().toISOString().slice(0, 10));
   const [availedAmt, setAvailedAmt] = useState("");
 
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentMonth, setPaymentMonth] = useState<number | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState("");
+  const [paymentNotes, setPaymentNotes] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
+
   const peopleById = useMemo(() => new Map((people ?? []).map((p) => [p.id, p])), [people]);
 
-  const paidMonths = useMemo(() => {
-    if (!payments) return new Set<number>();
-    return new Set(payments.filter((p) => p.paid).map((p) => p.month));
+  const paymentsMap = useMemo(() => {
+    if (!payments) return new Map<number, typeof payments[0]>();
+    return new Map(payments.map((p) => [p.month, p]));
   }, [payments]);
+
+  const paidMonths = useMemo(() => {
+    return new Set(paymentsMap.keys());
+  }, [paymentsMap]);
 
   if (!chitti || !payments || !people) {
     return <div className="h-40 animate-pulse rounded-3xl bg-muted/30 mt-2" />;
@@ -96,9 +107,32 @@ function ChittiDetail() {
   const monthlyTotal = (chitti.monthlyAmount ?? 0) * (chitti.numChits ?? 1);
   const paid = paidMonths.size;
   const totalMonths = chitti.totalMonths;
-  // Fallback for records with no status (old schema)
   const status = STATUS_META[chitti.status as keyof typeof STATUS_META] ?? STATUS_META.active;
   const StatusIcon = status.icon;
+
+  // Monthly stats calculations
+  const totalExpectedAmount = monthlyTotal * totalMonths;
+  const totalPaidAmount = payments.reduce((sum, p) => sum + p.paidAmount, 0);
+  const remainingAmount = Math.max(0, totalExpectedAmount - totalPaidAmount);
+  const monthsRemaining = Math.max(0, totalMonths - paid);
+  const progressPercent = Math.round((paid / Math.max(totalMonths, 1)) * 100);
+
+  // Current month index based on start date
+  const currentCalendarMonth = (() => {
+    const start = new Date(chitti.startDate);
+    const today = new Date();
+    const diff = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()) + 1;
+    if (diff >= 1 && diff <= totalMonths) return diff;
+    return null;
+  })();
+
+  // Current Due: first unpaid month
+  const currentDueMonth = (() => {
+    for (let m = 1; m <= totalMonths; m++) {
+      if (!paidMonths.has(m)) return m;
+    }
+    return null;
+  })();
 
   function monthLabel(month: number) {
     const d = new Date(chitti.startDate);
@@ -120,10 +154,56 @@ function ChittiDetail() {
     return d < today && !isCurrentMonth(month);
   }
 
-  async function toggleMonth(month: number) {
-    const nowPaid = paidMonths.has(month);
-    await setMonthPaid(chittiId, month, !nowPaid);
-    toast.success(!nowPaid ? "Marked as paid" : "Unmarked");
+  // Payment triggers
+  function openNewPayment(month: number) {
+    setPaymentMonth(month);
+    setPaymentAmount(String(monthlyTotal));
+    setPaymentDate(new Date().toISOString().slice(0, 10));
+    setPaymentNotes("");
+    setIsEditMode(false);
+    setPaymentModalOpen(true);
+  }
+
+  function openEditPayment(month: number) {
+    const existing = paymentsMap.get(month);
+    if (!existing) return;
+    setPaymentMonth(month);
+    setPaymentAmount(String(existing.paidAmount));
+    setPaymentDate(new Date(existing.paidDate).toISOString().slice(0, 10));
+    setPaymentNotes(existing.notes ?? "");
+    setIsEditMode(true);
+    setPaymentModalOpen(true);
+  }
+
+  async function submitPayment() {
+    if (paymentMonth === null) return;
+    const amt = Number(paymentAmount);
+    if (isNaN(amt) || amt <= 0) return toast.error("Enter a valid payment amount");
+    if (!paymentDate) return toast.error("Select a payment date");
+
+    try {
+      await recordPayment(
+        chittiId,
+        paymentMonth,
+        amt,
+        new Date(paymentDate).getTime(),
+        paymentNotes,
+      );
+      toast.success(isEditMode ? "Payment updated" : "Payment recorded");
+      setPaymentModalOpen(false);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function handleUndoPayment(month: number) {
+    try {
+      await deletePayment(chittiId, month);
+      toast.success("Payment deleted");
+      setPaymentModalOpen(false);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   async function handleAvailed(availed: boolean) {
@@ -131,7 +211,7 @@ function ChittiDetail() {
       const d = new Date(availedDate).getTime();
       const a = availedAmt ? Number(availedAmt) : undefined;
       await updateAvailed(chittiId, true, d, a);
-      toast.success("Availed recorded!");
+      toast.success("Availed status saved");
     } else {
       await updateAvailed(chittiId, false);
       toast.success("Availed cleared");
@@ -196,46 +276,74 @@ function ChittiDetail() {
         </AlertDialog>
       </header>
 
-      {/* Summary */}
-      <GlassCard strong className="relative overflow-hidden p-4">
+      {/* Summary grid */}
+      <GlassCard strong className="relative overflow-hidden p-4 space-y-4">
         <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-accent/10 blur-2xl" />
-        <div className="grid grid-cols-2 gap-3">
+        
+        {/* Top details */}
+        <div className="grid grid-cols-2 gap-4 border-b border-border/40 pb-3">
           <div>
             <div className="text-xs text-muted-foreground">Monthly payment</div>
             <div className="text-2xl font-bold text-accent">{fmt(monthlyTotal)}</div>
             {chitti.numChits > 1 && (
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-[10px] text-muted-foreground">
                 {chitti.numChits} chits × {fmt(chitti.monthlyAmount)}
               </div>
             )}
           </div>
           <div className="text-right">
-            <div className="text-xs text-muted-foreground">Duration</div>
+            <div className="text-xs text-muted-foreground">Total duration</div>
             <div className="text-2xl font-bold">{totalMonths}</div>
-            <div className="text-[11px] text-muted-foreground">months</div>
+            <div className="text-[10px] text-muted-foreground">months</div>
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="mt-4">
+        {/* Calculations Grid */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <div>
+            <div className="text-xs text-muted-foreground">Total Paid</div>
+            <div className="font-semibold text-foreground">{fmt(totalPaidAmount)}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">Remaining Amount</div>
+            <div className="font-semibold text-foreground">{fmt(remainingAmount)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Months Paid</div>
+            <div className="font-semibold text-foreground">{paid} paid</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">Months Remaining</div>
+            <div className="font-semibold text-foreground">{monthsRemaining} left</div>
+          </div>
+          {currentDueMonth && (
+            <div className="col-span-2 border-t border-border/30 pt-2 flex justify-between items-center text-xs">
+              <span className="text-muted-foreground font-medium flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5 text-primary" /> Current Due
+              </span>
+              <span className="font-semibold text-primary">
+                Month {currentDueMonth} ({monthLabel(currentDueMonth)})
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div>
           <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-            <span>Payments made</span>
-            <span className="font-medium text-foreground">{paid}/{totalMonths}</span>
+            <span>Payment progress</span>
+            <span className="font-medium text-foreground">{progressPercent}%</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-white/8">
             <div
               className="h-full rounded-full bg-accent transition-all duration-500"
-              style={{ width: `${(paid / Math.max(totalMonths, 1)) * 100}%` }}
+              style={{ width: `${progressPercent}%` }}
             />
-          </div>
-          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-            <span>{fmt(monthlyTotal * paid)} paid</span>
-            <span>{fmt(monthlyTotal * (totalMonths - paid))} remaining</span>
           </div>
         </div>
       </GlassCard>
 
-      {/* Availed section */}
+      {/* Availed card */}
       <GlassCard className={cn("p-4", chitti.availed && "border-[oklch(0.82_0.16_75/0.3)]")}>
         <div className="flex items-center justify-between">
           <div>
@@ -249,9 +357,6 @@ function ChittiDetail() {
                 {chitti.availedAmount ? ` · ${fmt(chitti.availedAmount)} received` : ""}
               </div>
             )}
-            {!chitti.availed && (
-              <div className="mt-0.5 text-xs text-muted-foreground">Tap to record when you receive the chitti amount</div>
-            )}
           </div>
           <Button
             variant="outline"
@@ -259,7 +364,7 @@ function ChittiDetail() {
             className="rounded-full text-xs"
             onClick={() => {
               if (chitti.availed) {
-                updateAvailed(chittiId, false).then(() => toast.success("Availed cleared"));
+                updateAvailed(chittiId, false).then(() => toast.success("Availed status cleared"));
               } else {
                 setAvailedModal(true);
               }
@@ -270,14 +375,27 @@ function ChittiDetail() {
         </div>
       </GlassCard>
 
-      {/* Monthly payments */}
-      <section>
-        <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Monthly contributions
-        </p>
+      {/* Monthly contributions section */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Monthly contributions
+          </p>
+          {/* Mark Current Month as Paid action */}
+          {currentCalendarMonth && !paidMonths.has(currentCalendarMonth) && (
+            <button
+              onClick={() => openNewPayment(currentCalendarMonth)}
+              className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+            >
+              <PlusCircle className="h-4 w-4" /> Paid Current Month
+            </button>
+          )}
+        </div>
+
         <GlassCard className="overflow-hidden divide-y divide-border/40 p-0">
           {Array.from({ length: totalMonths }, (_, i) => i + 1).map((month) => {
-            const paid = paidMonths.has(month);
+            const payment = paymentsMap.get(month);
+            const paid = !!payment;
             const current = isCurrentMonth(month);
             const past = isPastMonth(month);
             const unpaidPast = past && !paid;
@@ -285,16 +403,16 @@ function ChittiDetail() {
             return (
               <button
                 key={month}
-                onClick={() => toggleMonth(month)}
+                onClick={() => paid ? openEditPayment(month) : openNewPayment(month)}
                 className={cn(
-                  "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
+                  "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors",
                   paid ? "bg-[oklch(0.78_0.17_155/0.06)]" : "hover:bg-white/3",
                   current && !paid && "bg-primary/5",
                 )}
               >
                 {/* Checkbox */}
                 <div className={cn(
-                  "grid h-6 w-6 shrink-0 place-items-center rounded-lg transition-all",
+                  "grid h-6 w-6 shrink-0 place-items-center rounded-lg transition-all mt-0.5",
                   paid ? "bg-[oklch(0.78_0.17_155)] text-black" : unpaidPast ? "border border-destructive/60" : "border border-border"
                 )}>
                   {paid && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
@@ -302,7 +420,7 @@ function ChittiDetail() {
 
                 {/* Month info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span className="text-sm font-medium">{monthLabel(month)}</span>
                     {current && (
                       <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
@@ -316,14 +434,34 @@ function ChittiDetail() {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">Month {month} of {totalMonths}</div>
+                  
+                  {/* Payment Metadata (Date/Notes) */}
+                  {payment && (
+                    <div className="mt-1 space-y-0.5">
+                      <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Paid on {new Date(payment.paidDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                      </div>
+                      {payment.notes && (
+                        <p className="text-[11px] text-accent italic truncate">“{payment.notes}”</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Amount */}
-                <div className={cn(
-                  "text-sm font-semibold tabular-nums shrink-0",
-                  paid ? "text-[oklch(0.85_0.18_155)]" : unpaidPast ? "text-destructive/80" : "text-muted-foreground"
-                )}>
-                  {paid ? fmt(monthlyTotal) : `—`}
+                <div className="text-right shrink-0">
+                  <div className={cn(
+                    "text-sm font-semibold tabular-nums",
+                    paid ? "text-[oklch(0.85_0.18_155)]" : unpaidPast ? "text-destructive/80" : "text-muted-foreground"
+                  )}>
+                    {paid ? fmt(payment.paidAmount) : `—`}
+                  </div>
+                  {paid && payment.paidAmount !== monthlyTotal && (
+                    <div className="text-[9px] text-muted-foreground line-through">
+                      {fmt(monthlyTotal)}
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -346,6 +484,59 @@ function ChittiDetail() {
           <Button className="w-full gap-2" onClick={() => handleAvailed(true)}>
             <CalendarCheck className="h-4 w-4" /> Confirm availed
           </Button>
+        </div>
+      </WebModal>
+
+      {/* Payment Entry modal */}
+      <WebModal
+        open={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        title={isEditMode ? `Edit Month ${paymentMonth} Payment` : `Record Month ${paymentMonth} Payment`}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Amount Paid</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Paid Date</label>
+              <Input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Notes <span className="opacity-50">(optional)</span></label>
+            <Input
+              placeholder="e.g. Paid online"
+              value={paymentNotes}
+              onChange={(e) => setPaymentNotes(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            {isEditMode && (
+              <Button
+                variant="destructive"
+                className="flex-1 gap-1.5"
+                onClick={() => paymentMonth !== null && handleUndoPayment(paymentMonth)}
+              >
+                <Trash className="h-4 w-4" /> Delete
+              </Button>
+            )}
+            <Button className="flex-1" onClick={submitPayment}>
+              Save Payment
+            </Button>
+          </div>
         </div>
       </WebModal>
 

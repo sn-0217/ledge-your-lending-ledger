@@ -86,13 +86,13 @@ export interface Chitti {
   updatedAt: number;
 }
 
-/** Tracks whether I paid my monthly contribution for a given month */
 export interface ChittiMonthlyPayment {
   id: ID;
   chittiId: ID;
   month: number;    // 1-based round number
-  paid: boolean;
-  paidAt?: number;  // timestamp when marked paid
+  paidAmount: number;
+  paidDate: number;  // timestamp
+  notes?: string;
   createdAt: number;
   updatedAt: number;
 }

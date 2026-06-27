@@ -5,9 +5,7 @@ import { nanoid } from "nanoid";
 // ─── Chitti CRUD ──────────────────────────────────────────────────────────────
 
 export async function createChitti(
-  data: Pick<Chitti,
-    "organizerId" | "name" | "monthlyAmount" | "numChits" |
-    "startDate" | "totalMonths" | "notes">
+  data: Omit<Chitti, "id" | "status" | "createdAt" | "updatedAt">
 ): Promise<string> {
   const now = Date.now();
   const id = nanoid();
@@ -15,7 +13,6 @@ export async function createChitti(
     id,
     ...data,
     status: "active",
-    availed: false,
     createdAt: now,
     updatedAt: now,
   });
@@ -57,8 +54,13 @@ export async function deleteChitti(id: string) {
 
 // ─── Monthly payments ─────────────────────────────────────────────────────────
 
-/** Mark a month as paid. Idempotent. */
-export async function setMonthPaid(chittiId: string, month: number, paid: boolean) {
+export async function recordPayment(
+  chittiId: string,
+  month: number,
+  paidAmount: number,
+  paidDate: number,
+  notes?: string,
+) {
   const db = getDb();
   const existing = await db.chittiPayments
     .where("[chittiId+month]")
@@ -68,8 +70,9 @@ export async function setMonthPaid(chittiId: string, month: number, paid: boolea
   const now = Date.now();
   if (existing) {
     await db.chittiPayments.update(existing.id, {
-      paid,
-      paidAt: paid ? now : undefined,
+      paidAmount,
+      paidDate,
+      notes: notes?.trim() || undefined,
       updatedAt: now,
     });
   } else {
@@ -77,10 +80,18 @@ export async function setMonthPaid(chittiId: string, month: number, paid: boolea
       id: nanoid(),
       chittiId,
       month,
-      paid,
-      paidAt: paid ? now : undefined,
+      paidAmount,
+      paidDate,
+      notes: notes?.trim() || undefined,
       createdAt: now,
       updatedAt: now,
     });
   }
+}
+
+export async function deletePayment(chittiId: string, month: number) {
+  await getDb().chittiPayments
+    .where("[chittiId+month]")
+    .equals([chittiId, month])
+    .delete();
 }
