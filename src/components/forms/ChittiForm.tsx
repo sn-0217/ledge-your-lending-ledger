@@ -6,8 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { Chitti } from "@/lib/types";
+import type { Chitti, ChittiAvailedSlot } from "@/lib/types";
 import { Link } from "@tanstack/react-router";
+
+function getInitialSlots(numChits: number, existingSlots?: ChittiAvailedSlot[]): ChittiAvailedSlot[] {
+  const slots: ChittiAvailedSlot[] = [];
+  for (let i = 1; i <= numChits; i++) {
+    const existing = existingSlots?.find((s) => s.chitNumber === i);
+    slots.push(existing ?? { chitNumber: i, availed: false });
+  }
+  return slots;
+}
 
 interface ChittiFormProps {
   chitti?: Chitti; // If provided, we are editing this chitti
@@ -37,16 +46,10 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
   const [notes, setNotes] = useState(chitti?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
-  const [availed, setAvailed] = useState(chitti?.availed ?? false);
-  const [availedDate, setAvailedDate] = useState(() => {
-    if (chitti?.availedDate) {
-      return new Date(chitti.availedDate).toISOString().slice(0, 10);
-    }
-    return new Date().toISOString().slice(0, 10);
+  const [slots, setSlots] = useState<ChittiAvailedSlot[]>(() => {
+    const n = chitti?.numChits ?? 1;
+    return getInitialSlots(n, chitti?.availedSlots);
   });
-  const [availedAmount, setAvailedAmount] = useState(
-    chitti?.availedAmount ? String(chitti.availedAmount) : ""
-  );
 
   const monthly = (Number(monthlyAmount) || 0) * (Number(numChits) || 1);
 
@@ -63,8 +66,19 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
     try {
       const [y, mo] = startDate.split("-").map(Number);
       const startTimestamp = new Date(y, mo - 1, 1).getTime();
-      const availedTimestamp = availed ? new Date(availedDate).getTime() : undefined;
-      const availedAmtNum = availed && availedAmount ? Number(availedAmount) : undefined;
+
+      const finalSlots = slots.map((s) => {
+        if (!s.availed) return { chitNumber: s.chitNumber, availed: false };
+        return {
+          chitNumber: s.chitNumber,
+          availed: true,
+          availedDate: s.availedDate ?? Date.now(),
+          availedAmount: s.availedAmount ? Number(s.availedAmount) : undefined,
+        };
+      });
+
+      const hasAnyAvailed = finalSlots.some((s) => s.availed);
+      const firstAvailed = finalSlots.find((s) => s.availed);
 
       if (chitti) {
         // Edit flow
@@ -75,9 +89,10 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
           numChits: n,
           startDate: startTimestamp,
           totalMonths: m,
-          availed,
-          availedDate: availedTimestamp,
-          availedAmount: availedAmtNum,
+          availedSlots: finalSlots,
+          availed: hasAnyAvailed,
+          availedDate: firstAvailed?.availedDate,
+          availedAmount: firstAvailed?.availedAmount,
           notes: notes.trim() || undefined,
         });
         toast.success("Chitti updated!");
@@ -90,9 +105,10 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
           numChits: n,
           startDate: startTimestamp,
           totalMonths: m,
-          availed,
-          availedDate: availedTimestamp,
-          availedAmount: availedAmtNum,
+          availedSlots: finalSlots,
+          availed: hasAnyAvailed,
+          availedDate: firstAvailed?.availedDate,
+          availedAmount: firstAvailed?.availedAmount,
           notes: notes.trim() || undefined,
         });
         toast.success("Chitti added!");
@@ -161,7 +177,20 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">No. of chits joined</label>
-          <Input type="number" placeholder="1" inputMode="numeric" value={numChits} onChange={(e) => setNumChits(e.target.value)} />
+          <Input
+            type="number"
+            placeholder="1"
+            inputMode="numeric"
+            value={numChits}
+            onChange={(e) => {
+              const val = e.target.value;
+              setNumChits(val);
+              const n = Number(val);
+              if (!isNaN(n) && n >= 1) {
+                setSlots((prev) => getInitialSlots(n, prev));
+              }
+            }}
+          />
         </div>
       </div>
 
@@ -193,43 +222,76 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
         </div>
       )}
 
-      {/* Availed Status */}
-      <div className="space-y-2 border-t border-border/40 pt-3">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={availed}
-            onChange={(e) => setAvailed(e.target.checked)}
-            className="rounded bg-secondary border-border text-primary focus:ring-primary h-4 w-4"
-          />
-          <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
-            Availed / Received lump-sum amount?
-          </span>
-        </label>
+      {/* Availed Status per Chit */}
+      {slots.map((s) => (
+        <div key={s.chitNumber} className="space-y-2 border-t border-border/40 pt-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={s.availed}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setSlots((prev) =>
+                  prev.map((item) =>
+                    item.chitNumber === s.chitNumber
+                      ? {
+                          ...item,
+                          availed: checked,
+                          availedDate: checked ? Date.now() : undefined,
+                        }
+                      : item
+                  )
+                );
+              }}
+              className="rounded bg-secondary border-border text-primary focus:ring-primary h-4 w-4"
+            />
+            <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
+              {Number(numChits) > 1 ? `Chit #${s.chitNumber} Availed?` : "Availed / Received lump-sum amount?"}
+            </span>
+          </label>
 
-        {availed && (
-          <div className="grid grid-cols-2 gap-3 pl-6">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Availed Date</label>
-              <Input
-                type="date"
-                value={availedDate}
-                onChange={(e) => setAvailedDate(e.target.value)}
-              />
+          {s.availed && (
+            <div className="grid grid-cols-2 gap-3 pl-6">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Availed Date</label>
+                <Input
+                  type="date"
+                  value={
+                    s.availedDate
+                      ? new Date(s.availedDate).toISOString().slice(0, 10)
+                      : new Date().toISOString().slice(0, 10)
+                  }
+                  onChange={(e) => {
+                    const d = e.target.value ? new Date(e.target.value).getTime() : Date.now();
+                    setSlots((prev) =>
+                      prev.map((item) =>
+                        item.chitNumber === s.chitNumber ? { ...item, availedDate: d } : item
+                      )
+                    );
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Availed Amount <span className="opacity-50">(optional)</span></label>
+                <Input
+                  type="number"
+                  placeholder="Lump-sum received"
+                  inputMode="numeric"
+                  value={s.availedAmount ? String(s.availedAmount) : ""}
+                  onChange={(e) => {
+                    const a = e.target.value ? Number(e.target.value) : undefined;
+                    setSlots((prev) =>
+                      prev.map((item) =>
+                        item.chitNumber === s.chitNumber ? { ...item, availedAmount: a } : item
+                      )
+                    );
+                  }}
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Availed Amount <span className="opacity-50">(optional)</span></label>
-              <Input
-                type="number"
-                placeholder="Lump-sum received"
-                inputMode="numeric"
-                value={availedAmount}
-                onChange={(e) => setAvailedAmount(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ))}
 
       {/* Notes */}
       <div className="space-y-1">

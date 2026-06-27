@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import type { Chitti, ChittiMonthlyPayment, ChittiStatus } from "./types";
+import type { Chitti, ChittiMonthlyPayment, ChittiStatus, ChittiAvailedSlot } from "./types";
 import { nanoid } from "nanoid";
 
 // ─── Chitti CRUD ──────────────────────────────────────────────────────────────
@@ -23,16 +23,15 @@ export async function updateChittiStatus(id: string, status: ChittiStatus) {
   await getDb().chittis.update(id, { status, updatedAt: Date.now() });
 }
 
-export async function updateAvailed(
-  id: string,
-  availed: boolean,
-  availedDate?: number,
-  availedAmount?: number,
-) {
+
+export async function updateAvailedSlots(id: string, slots: ChittiAvailedSlot[]) {
+  const hasAnyAvailed = slots.some((s) => s.availed);
+  const firstAvailed = slots.find((s) => s.availed);
   await getDb().chittis.update(id, {
-    availed,
-    availedDate: availed ? availedDate : undefined,
-    availedAmount: availed ? availedAmount : undefined,
+    availedSlots: slots,
+    availed: hasAnyAvailed,
+    availedDate: firstAvailed?.availedDate,
+    availedAmount: firstAvailed?.availedAmount,
     updatedAt: Date.now(),
   });
 }

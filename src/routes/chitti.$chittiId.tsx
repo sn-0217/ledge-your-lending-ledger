@@ -8,7 +8,7 @@ import { WebModal } from "@/components/common/WebModal";
 import { useChitti, useChittiPayments } from "@/lib/chittiQueries";
 import { usePeople } from "@/lib/queries";
 import {
-  recordPayment, deletePayment, updateAvailed, updateChittiStatus, deleteChitti,
+  recordPayment, deletePayment, updateAvailedSlots, updateChittiStatus, deleteChitti,
 } from "@/lib/chittiRepositories";
 import { useFormatMoney, initials } from "@/lib/formatters";
 import {
@@ -57,6 +57,7 @@ function ChittiDetail() {
   const [availedModal, setAvailedModal] = useState(false);
   const [availedDate, setAvailedDate] = useState(new Date().toISOString().slice(0, 10));
   const [availedAmt, setAvailedAmt] = useState("");
+  const [targetChitNum, setTargetChitNum] = useState<number | null>(null);
 
   // Payment modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -207,15 +208,21 @@ function ChittiDetail() {
   }
 
   async function handleAvailed(availed: boolean) {
-    if (availed) {
-      const d = new Date(availedDate).getTime();
-      const a = availedAmt ? Number(availedAmt) : undefined;
-      await updateAvailed(chittiId, true, d, a);
-      toast.success("Availed status saved");
-    } else {
-      await updateAvailed(chittiId, false);
-      toast.success("Availed cleared");
-    }
+    if (targetChitNum === null) return;
+    const updatedSlots = Array.from({ length: chitti.numChits }, (_, idx) => {
+      const existing = chitti.availedSlots?.find((s) => s.chitNumber === idx + 1);
+      if (idx + 1 === targetChitNum) {
+        return {
+          chitNumber: targetChitNum,
+          availed: true,
+          availedDate: new Date(availedDate).getTime(),
+          availedAmount: availedAmt ? Number(availedAmt) : undefined,
+        };
+      }
+      return existing ?? { chitNumber: idx + 1, availed: false };
+    });
+    await updateAvailedSlots(chittiId, updatedSlots);
+    toast.success(`Chit #${targetChitNum} availed recorded!`);
     setAvailedModal(false);
   }
 
@@ -343,35 +350,55 @@ function ChittiDetail() {
         </div>
       </GlassCard>
 
-      {/* Availed card */}
-      <GlassCard className={cn("p-4", chitti.availed && "border-[oklch(0.82_0.16_75/0.3)]")}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 font-semibold">
-              <Trophy className={cn("h-4 w-4", chitti.availed ? "text-[oklch(0.82_0.16_75)]" : "text-muted-foreground")} />
-              {chitti.availed ? "Availed ✓" : "Not yet availed"}
-            </div>
-            {chitti.availed && (
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {chitti.availedDate && new Date(chitti.availedDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
-                {chitti.availedAmount ? ` · ${fmt(chitti.availedAmount)} received` : ""}
+      {/* Availed slots list */}
+      <GlassCard className="p-4 space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Availed Installments</h3>
+        <div className="divide-y divide-border/40 space-y-3">
+          {Array.from({ length: chitti.numChits }, (_, i) => i + 1).map((chitNum) => {
+            const slot = chitti.availedSlots?.find((s) => s.chitNumber === chitNum) ?? {
+              chitNumber: chitNum,
+              availed: false,
+            };
+
+            return (
+              <div key={chitNum} className="flex items-center justify-between pt-3 first:pt-0">
+                <div>
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Trophy className={cn("h-4 w-4", slot.availed ? "text-[oklch(0.82_0.16_75)]" : "text-muted-foreground")} />
+                    <span className="text-sm font-medium">Chit #{chitNum} {slot.availed ? "Availed ✓" : "Not yet availed"}</span>
+                  </div>
+                  {slot.availed && (
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {slot.availedDate && new Date(slot.availedDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                      {slot.availedAmount ? ` · ${fmt(slot.availedAmount)} received` : ""}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-xs"
+                  onClick={() => {
+                    if (slot.availed) {
+                      const updatedSlots = Array.from({ length: chitti.numChits }, (_, idx) => {
+                        const existing = chitti.availedSlots?.find((s) => s.chitNumber === idx + 1);
+                        if (idx + 1 === chitNum) return { chitNumber: chitNum, availed: false };
+                        return existing ?? { chitNumber: idx + 1, availed: false };
+                      });
+                      updateAvailedSlots(chittiId, updatedSlots).then(() => toast.success(`Chit #${chitNum} cleared`));
+                    } else {
+                      setTargetChitNum(chitNum);
+                      setAvailedDate(new Date().toISOString().slice(0, 10));
+                      setAvailedAmt("");
+                      setAvailedModal(true);
+                    }
+                  }}
+                >
+                  {slot.availed ? "Clear" : "Mark availed"}
+                </Button>
               </div>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full text-xs"
-            onClick={() => {
-              if (chitti.availed) {
-                updateAvailed(chittiId, false).then(() => toast.success("Availed status cleared"));
-              } else {
-                setAvailedModal(true);
-              }
-            }}
-          >
-            {chitti.availed ? "Clear" : "Mark availed"}
-          </Button>
+            );
+          })}
         </div>
       </GlassCard>
 
@@ -470,16 +497,16 @@ function ChittiDetail() {
       </section>
 
       {/* Availed modal */}
-      <WebModal open={availedModal} onClose={() => setAvailedModal(false)} title="Record availed">
+      <WebModal open={availedModal} onClose={() => setAvailedModal(false)} title={`Record Availed Chit #${targetChitNum}`}>
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">Record when you received the chitti lump-sum amount.</p>
+          <p className="text-sm text-muted-foreground">Record when you received the lump-sum amount for Chit #{targetChitNum}.</p>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Date received</label>
             <Input type="date" value={availedDate} onChange={(e) => setAvailedDate(e.target.value)} />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Amount received <span className="opacity-50">(optional)</span></label>
-            <Input type="number" inputMode="numeric" placeholder={fmt(chitti.monthlyAmount * chitti.numChits * chitti.totalMonths)} value={availedAmt} onChange={(e) => setAvailedAmt(e.target.value)} />
+            <Input type="number" inputMode="numeric" placeholder={fmt(chitti.monthlyAmount * chitti.totalMonths)} value={availedAmt} onChange={(e) => setAvailedAmt(e.target.value)} />
           </div>
           <Button className="w-full gap-2" onClick={() => handleAvailed(true)}>
             <CalendarCheck className="h-4 w-4" /> Confirm availed

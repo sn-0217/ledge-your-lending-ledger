@@ -68,6 +68,13 @@ export interface PersonBalance {
 
 export type ChittiStatus = "active" | "completed" | "cancelled";
 
+export interface ChittiAvailedSlot {
+  chitNumber: number; // 1 to numChits
+  availed: boolean;
+  availedDate?: number;
+  availedAmount?: number;
+}
+
 export interface Chitti {
   id: ID;
   organizerId: ID;      // Person.id who runs this chitti
@@ -77,7 +84,9 @@ export interface Chitti {
   startDate: number;    // timestamp of month-1 (first day of start month)
   totalMonths: number;  // total duration in months
   status: ChittiStatus;
-  // Availed (lump-sum received)
+  // Availed slots (one per joined chit)
+  availedSlots?: ChittiAvailedSlot[];
+  // Legacy availed fields (for fallback)
   availed: boolean;
   availedDate?: number;
   availedAmount?: number;
