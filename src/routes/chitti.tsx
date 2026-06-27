@@ -4,9 +4,7 @@ import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { WebModal } from "@/components/common/WebModal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useChittis } from "@/lib/chittiQueries";
-import { createChitti } from "@/lib/chittiRepositories";
 import { usePeople } from "@/lib/queries";
 import { useFormatMoney, initials } from "@/lib/formatters";
 import {
@@ -14,10 +12,10 @@ import {
   CheckCircle2, Clock, XCircle, Trophy,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import type { Chitti } from "@/lib/types";
+import { ChittiForm } from "@/components/forms/ChittiForm";
 
 export const Route = createFileRoute("/chitti")({
   head: () => ({ meta: [{ title: "Chitti — Ledge" }] }),
@@ -138,7 +136,7 @@ function ChittiList() {
       )}
 
       <WebModal open={creating} onClose={() => setCreating(false)} title="Add chitti">
-        <CreateChittiForm people={people} onDone={() => setCreating(false)} />
+        <ChittiForm onDone={() => setCreating(false)} />
       </WebModal>
     </div>
   );
@@ -206,135 +204,5 @@ function ChittiCard({
         </GlassCard>
       </Link>
     </motion.div>
-  );
-}
-
-function CreateChittiForm({ people, onDone }: { people: ReturnType<typeof usePeople> & Array<any>; onDone: () => void }) {
-  const [organizerId, setOrganizerId] = useState("");
-  const [name, setName] = useState("");
-  const [monthlyAmount, setMonthlyAmount] = useState("");
-  const [numChits, setNumChits] = useState("1");
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 7));
-  const [totalMonths, setTotalMonths] = useState("");
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const monthly = (Number(monthlyAmount) || 0) * (Number(numChits) || 1);
-
-  async function submit() {
-    if (!organizerId) return toast.error("Select the chitti organizer");
-    const amt = Number(monthlyAmount);
-    if (!amt || amt <= 0) return toast.error("Enter a valid monthly amount");
-    const n = Number(numChits);
-    if (!n || n < 1) return toast.error("Enter number of chits joined (at least 1)");
-    const m = Number(totalMonths);
-    if (!m || m <= 0) return toast.error("Enter total duration in months");
-
-    setSaving(true);
-    try {
-      const [y, mo] = startDate.split("-").map(Number);
-      await createChitti({
-        organizerId,
-        name: name.trim() || undefined,
-        monthlyAmount: amt,
-        numChits: n,
-        startDate: new Date(y, mo - 1, 1).getTime(),
-        totalMonths: m,
-        notes: notes.trim() || undefined,
-      });
-      toast.success("Chitti added!");
-      onDone();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Organizer */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Organizer (who runs this chitti)</label>
-        <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
-          {(people ?? []).map((p: any) => (
-            <button
-              key={p.id}
-              onClick={() => setOrganizerId(p.id)}
-              className={cn(
-                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-left transition-all",
-                organizerId === p.id
-                  ? "bg-accent/20 text-accent ring-1 ring-accent/40"
-                  : "bg-secondary/40 hover:bg-secondary/70"
-              )}
-            >
-              <div className={cn(
-                "grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-bold",
-                organizerId === p.id ? "bg-accent/30" : "bg-muted"
-              )}>
-                {initials(p.name)}
-              </div>
-              <span className="truncate capitalize">{p.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Name */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground">Chitti name <span className="opacity-50">(optional)</span></label>
-        <Input placeholder="e.g. Gold Chitti" value={name} onChange={(e) => setName(e.target.value)} />
-      </div>
-
-      {/* Amount + Chits */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Amount / chit / month</label>
-          <Input type="number" placeholder="5000" inputMode="numeric" value={monthlyAmount} onChange={(e) => setMonthlyAmount(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">No. of chits joined</label>
-          <Input type="number" placeholder="1" inputMode="numeric" value={numChits} onChange={(e) => setNumChits(e.target.value)} />
-        </div>
-      </div>
-
-      {/* Duration + Start */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Total months</label>
-          <Input type="number" placeholder="20" inputMode="numeric" value={totalMonths} onChange={(e) => setTotalMonths(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Start month</label>
-          <Input type="month" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        </div>
-      </div>
-
-      {/* Preview */}
-      {monthly > 0 && (
-        <div className="rounded-2xl bg-accent/10 px-4 py-3 text-sm space-y-1">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">My monthly payment</span>
-            <span className="font-bold text-accent">{(monthly).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
-          </div>
-          {Number(totalMonths) > 0 && (
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Total contribution</span>
-              <span>{(monthly * Number(totalMonths)).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Notes */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground">Notes <span className="opacity-50">(optional)</span></label>
-        <Input placeholder="Any details..." value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </div>
-
-      <Button className="w-full" onClick={submit} disabled={saving}>
-        {saving ? "Saving…" : "Add chitti"}
-      </Button>
-    </div>
   );
 }

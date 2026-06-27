@@ -13,7 +13,7 @@ import {
 import { useFormatMoney, initials } from "@/lib/formatters";
 import {
   ArrowLeft, Check, Trophy, Trash2, CheckCircle2, Clock, XCircle,
-  ChevronDown, ChevronUp, CalendarCheck,
+  ChevronDown, ChevronUp, CalendarCheck, Pencil,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
+import { ChittiForm } from "@/components/forms/ChittiForm";
 
 export const Route = createFileRoute("/chitti/$chittiId")({
   head: () => ({ meta: [{ title: "Chitti — Ledge" }] }),
@@ -52,6 +53,7 @@ function ChittiDetail() {
   const people = usePeople();
   const fmt = useFormatMoney();
 
+  const [editing, setEditing] = useState(false);
   const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
   const [availedModal, setAvailedModal] = useState(false);
   const [availedDate, setAvailedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -158,6 +160,10 @@ function ChittiDetail() {
             })}
           </DropdownMenuContent>
         </DropdownMenu>
+        {/* Edit */}
+        <Button variant="ghost" size="icon" className="rounded-full shrink-0" onClick={() => setEditing(true)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
         {/* Delete */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -329,6 +335,11 @@ function ChittiDetail() {
             <CalendarCheck className="h-4 w-4" /> Confirm availed
           </Button>
         </div>
+      </WebModal>
+
+      {/* Edit Chitti Modal */}
+      <WebModal open={editing} onClose={() => setEditing(false)} title="Edit chitti">
+        <ChittiForm chitti={chitti} onDone={() => setEditing(false)} />
       </WebModal>
     </div>
   );
