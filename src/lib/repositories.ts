@@ -16,7 +16,7 @@ const uid = () =>
 
 const now = () => Date.now();
 
-export const DEFAULT_CATEGORIES = ["Major Debt", "Minor Debt"] as const;
+export const DEFAULT_CATEGORIES = ["General"] as const;
 
 /* ---------------- People ---------------- */
 
