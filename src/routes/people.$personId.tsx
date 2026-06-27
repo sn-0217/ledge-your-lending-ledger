@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
+import { WebModal } from "@/components/common/WebModal";
 import {
   useCategoriesFor,
   usePerson,
@@ -16,9 +17,9 @@ import {
   renameCategory,
 } from "@/lib/repositories";
 import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
-import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Collapsible,
@@ -48,61 +49,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
-
-/** Bottom sheet on mobile, centered card on sm+ screens */
-function WebModal({
-  open,
-  onClose,
-  title,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={onClose}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-          />
-          <motion.div
-            key="modal"
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 32 }}
-            transition={{ type: "spring", stiffness: 340, damping: 32 }}
-            className={cn(
-              "glass-strong fixed z-50 overflow-y-auto",
-              "bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-3xl px-4 pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-4",
-              "sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85dvh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:px-6 sm:pb-6 sm:pt-6",
-            )}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold">{title}</h2>
-              <button
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/50 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {children}
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
 
 export const Route = createFileRoute("/people/$personId")({
   head: () => ({ meta: [{ title: "Person — Ledge" }] }),
