@@ -61,3 +61,38 @@ export interface PersonBalance {
   settled: boolean;
   lastActivity: number;
 }
+
+// ─── Chitti / Chitfund (My Participation Tracker) ─────────────────────────────
+// Completely independent of the lending/borrowing module.
+// Uses the same People list only to identify the organizer.
+
+export type ChittiStatus = "active" | "completed" | "cancelled";
+
+export interface Chitti {
+  id: ID;
+  organizerId: ID;      // Person.id who runs this chitti
+  name?: string;        // optional label
+  monthlyAmount: number;// amount per chit per month (e.g. 5000)
+  numChits: number;     // how many chits I joined (e.g. 2)
+  startDate: number;    // timestamp of month-1 (first day of start month)
+  totalMonths: number;  // total duration in months
+  status: ChittiStatus;
+  // Availed (lump-sum received)
+  availed: boolean;
+  availedDate?: number;
+  availedAmount?: number;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Tracks whether I paid my monthly contribution for a given month */
+export interface ChittiMonthlyPayment {
+  id: ID;
+  chittiId: ID;
+  month: number;    // 1-based round number
+  paid: boolean;
+  paidAt?: number;  // timestamp when marked paid
+  createdAt: number;
+  updatedAt: number;
+}
