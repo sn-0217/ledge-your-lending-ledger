@@ -3,13 +3,20 @@ import { BarChart3, Home, PiggyBank, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
-const items = [
+type NavItem = {
+  to: "/" | "/people" | "/chitti" | "/analytics" | "/settings";
+  label: string;
+  icon: typeof Home;
+  exact?: boolean;
+};
+
+const items: NavItem[] = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/people", label: "People", icon: Users },
   { to: "/chitti", label: "Chitti", icon: PiggyBank },
   { to: "/analytics", label: "Insights", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
