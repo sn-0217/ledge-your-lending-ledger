@@ -24,10 +24,10 @@ export function BottomNav() {
   return (
     /* Sits as a flex child at the bottom of AppShell's column — never shifts */
     <nav
-      className="shrink-0 flex justify-center pb-[max(env(safe-area-inset-bottom),0.75rem)] px-3 pt-2"
+      className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pb-[max(env(safe-area-inset-bottom),0.75rem)] px-3 pt-2 pointer-events-none"
       aria-label="Primary"
     >
-      <div className="glass-strong flex w-full max-w-md items-center justify-around rounded-full border px-2 py-2">
+      <div className="glass-strong flex w-full max-w-md items-center justify-around rounded-full border px-2 py-2 pointer-events-auto shadow-2xl">
         {items.map((it) => {
           const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
           const Icon = it.icon;
