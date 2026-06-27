@@ -7,9 +7,12 @@ import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
+  CartesianGrid,
   Cell,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -202,36 +205,69 @@ function Analytics() {
         </div>
       </GlassCard>
 
-      {/* Monthly bar chart */}
+      {/* Lending trend – area chart */}
       {monthly.length > 0 && (
-        <GlassCard className="p-4">
-          <h2 className="mb-1 text-sm font-semibold">Monthly activity</h2>
-          <p className="mb-4 text-xs text-muted-foreground">Lent vs borrowed — last 6 months</p>
+        <GlassCard className="overflow-hidden p-4">
+          <h2 className="mb-0.5 text-sm font-semibold">Lending trend</h2>
+          <p className="mb-4 text-xs text-muted-foreground">Amount lent over last 6 months</p>
           <div className="h-44">
             <ResponsiveContainer>
-              <BarChart data={monthly} barGap={4}>
-                <XAxis dataKey="label" stroke="currentColor" fontSize={11} tickLine={false} axisLine={false} />
+              <AreaChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="lentGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="oklch(0.75 0.15 220)" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="oklch(0.75 0.15 220)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" vertical={false} />
+                <XAxis dataKey="label" stroke="currentColor" fontSize={11} tickLine={false} axisLine={false} tick={{ fill: "oklch(0.65 0.02 260)" }} />
                 <Tooltip
-                  cursor={{ fill: "oklch(1 0 0 / 0.04)" }}
-                  contentStyle={{
-                    background: "oklch(0.12 0.012 260)",
-                    border: "1px solid oklch(1 0 0 / 0.1)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                  formatter={(v: number) => fmt(v)}
+                  cursor={{ stroke: "oklch(0.75 0.15 220 / 0.4)", strokeWidth: 1 }}
+                  contentStyle={{ background: "oklch(0.1 0.01 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
+                  formatter={(v: number) => [fmt(v), "Lent"]}
                 />
-                <Bar dataKey="lent" name="Lent" fill={GREEN} radius={[5, 5, 0, 0]} />
-                <Bar dataKey="borrowed" name="Borrowed" fill={RED} radius={[5, 5, 0, 0]} />
-              </BarChart>
+                <Area
+                  type="monotone"
+                  dataKey="lent"
+                  stroke="oklch(0.75 0.15 220)"
+                  strokeWidth={2}
+                  fill="url(#lentGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "oklch(0.75 0.15 220)", strokeWidth: 0 }}
+                />
+              </AreaChart>
             </ResponsiveContainer>
-          </div>
-          <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: GREEN }} />Lent</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: RED }} />Borrowed</span>
           </div>
         </GlassCard>
       )}
+
+      {/* Repayments received – line chart */}
+      {monthly.length > 0 && (
+        <GlassCard className="overflow-hidden p-4">
+          <h2 className="mb-0.5 text-sm font-semibold">Borrowing trend</h2>
+          <p className="mb-4 text-xs text-muted-foreground">Amount borrowed over last 6 months</p>
+          <div className="h-44">
+            <ResponsiveContainer>
+              <LineChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" vertical={false} />
+                <XAxis dataKey="label" stroke="currentColor" fontSize={11} tickLine={false} axisLine={false} tick={{ fill: "oklch(0.65 0.02 260)" }} />
+                <Tooltip
+                  cursor={{ stroke: `${GREEN}66`, strokeWidth: 1 }}
+                  contentStyle={{ background: "oklch(0.1 0.01 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
+                  formatter={(v: number) => [fmt(v), "Borrowed"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="borrowed"
+                  stroke={GREEN}
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: GREEN, strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: GREEN, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
 
       {/* Outstanding distribution pie */}
       {pieData.length > 0 && (

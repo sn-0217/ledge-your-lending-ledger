@@ -26,7 +26,7 @@ export function BottomNav() {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(env(safe-area-inset-bottom),0.75rem)]"
       aria-label="Primary"
     >
-      <div className="glass-strong pointer-events-auto mx-3 flex w-full max-w-xl items-center justify-around rounded-full border px-2 py-2">
+      <div className="glass-strong pointer-events-auto mx-3 flex w-full max-w-md items-center justify-around rounded-full border px-2 py-2">
         {items.map((it) => {
           const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
           const Icon = it.icon;
