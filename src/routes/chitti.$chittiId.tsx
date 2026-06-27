@@ -73,9 +73,21 @@ function ChittiDetail() {
   // Guard: chitti loaded but record is invalid/stale schema
   if (!chitti.organizerId) {
     return (
-      <GlassCard className="p-6 text-center text-sm text-muted-foreground">
-        This chitti record is from an old format. Please delete it and re-create it.
-        <Link to="/chitti" className="mt-3 block text-primary">← Back to Chitti</Link>
+      <GlassCard className="p-6 text-center text-sm text-muted-foreground space-y-4">
+        <div>This chitti record is from an old format. Please delete it and re-create it.</div>
+        <div className="flex justify-center gap-4">
+          <Link to="/chitti" className="text-primary hover:underline">← Back to Chitti</Link>
+          <button
+            onClick={async () => {
+              await deleteChitti(chittiId);
+              toast.success("Stale chitti deleted");
+              navigate({ to: "/chitti" });
+            }}
+            className="text-destructive font-semibold hover:underline"
+          >
+            Delete Chitti
+          </button>
+        </div>
       </GlassCard>
     );
   }

@@ -31,18 +31,22 @@ export const Route = createFileRoute("/settings")({
 
 async function exportJSON() {
   const db = getDb();
-  const [people, categories, transactions] = await Promise.all([
+  const [people, categories, transactions, chittis, chittiPayments] = await Promise.all([
     db.people.toArray(),
     db.categories.toArray(),
     db.transactions.toArray(),
+    db.chittis.toArray(),
+    db.chittiPayments.toArray(),
   ]);
   const payload = {
     app: "ledge",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     people,
     categories,
     transactions,
+    chittis,
+    chittiPayments,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -91,19 +95,23 @@ async function importJSON(file: File) {
   const data = JSON.parse(text);
   if (data.app !== "ledge") throw new Error("Not a Ledge backup file");
   const db = getDb();
-  await db.transaction("rw", db.people, db.categories, db.transactions, async () => {
+  await db.transaction("rw", db.people, db.categories, db.transactions, db.chittis, db.chittiPayments, async () => {
     if (data.people) await db.people.bulkPut(data.people);
     if (data.categories) await db.categories.bulkPut(data.categories);
     if (data.transactions) await db.transactions.bulkPut(data.transactions);
+    if (data.chittis) await db.chittis.bulkPut(data.chittis);
+    if (data.chittiPayments) await db.chittiPayments.bulkPut(data.chittiPayments);
   });
 }
 
 async function clearAllData() {
   const db = getDb();
-  await db.transaction("rw", db.people, db.categories, db.transactions, async () => {
+  await db.transaction("rw", db.people, db.categories, db.transactions, db.chittis, db.chittiPayments, async () => {
     await db.transactions.clear();
     await db.categories.clear();
     await db.people.clear();
+    await db.chittiPayments.clear();
+    await db.chittis.clear();
   });
 }
 

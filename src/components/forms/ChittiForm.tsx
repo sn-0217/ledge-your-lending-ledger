@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Chitti } from "@/lib/types";
+import { Link } from "@tanstack/react-router";
 
 interface ChittiFormProps {
   chitti?: Chitti; // If provided, we are editing this chitti
@@ -91,26 +92,39 @@ export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-muted-foreground">Organizer (who runs this chitti)</label>
         <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
-          {(people ?? []).map((p: any) => (
-            <button
-              key={p.id}
-              onClick={() => setOrganizerId(p.id)}
-              className={cn(
-                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-left transition-all",
-                organizerId === p.id
-                  ? "bg-accent/20 text-accent ring-1 ring-accent/40"
-                  : "bg-secondary/40 hover:bg-secondary/70"
-              )}
-            >
-              <div className={cn(
-                "grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-bold",
-                organizerId === p.id ? "bg-accent/30" : "bg-muted"
-              )}>
-                {initials(p.name)}
-              </div>
-              <span className="truncate capitalize">{p.name}</span>
-            </button>
-          ))}
+          {people === undefined ? (
+            <div className="col-span-2 text-xs text-muted-foreground py-2 text-center">Loading organizers...</div>
+          ) : people.length === 0 ? (
+            <div className="col-span-2 text-xs text-muted-foreground py-4 text-center">
+              No people found. Please add a person in the{" "}
+              <Link to="/people" onClick={onDone} className="text-primary hover:underline font-semibold">
+                People
+              </Link>{" "}
+              tab first to select them as organizer.
+            </div>
+          ) : (
+            people.map((p: any) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setOrganizerId(p.id)}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-left transition-all",
+                  organizerId === p.id
+                    ? "bg-accent/20 text-accent ring-1 ring-accent/40"
+                    : "bg-secondary/40 hover:bg-secondary/70"
+                )}
+              >
+                <div className={cn(
+                  "grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-bold",
+                  organizerId === p.id ? "bg-accent/30" : "bg-muted"
+                )}>
+                  {initials(p.name)}
+                </div>
+                <span className="truncate capitalize">{p.name}</span>
+              </button>
+            ))
+          )}
         </div>
       </div>
 
