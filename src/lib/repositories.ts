@@ -25,9 +25,10 @@ export async function createPerson(
 ): Promise<Person> {
   const db = getDb();
   const ts = now();
+  const nameTrimmed = input.name.trim();
   const person: Person = {
     id: uid(),
-    name: input.name.trim(),
+    name: nameTrimmed,
     phone: input.phone?.trim() || undefined,
     tags: input.tags ?? [],
     notes: input.notes?.trim() || undefined,
@@ -35,6 +36,13 @@ export async function createPerson(
     updatedAt: ts,
   };
   await db.transaction("rw", db.people, db.categories, async () => {
+    const existing = await db.people
+      .filter((p) => p.name.toLowerCase() === nameTrimmed.toLowerCase())
+      .first();
+    if (existing) {
+      throw new Error(`A person named "${nameTrimmed}" already exists.`);
+    }
+
     await db.people.add(person);
     if (input.defaultCategories !== false) {
       for (const name of DEFAULT_CATEGORIES) {
@@ -52,7 +60,21 @@ export async function createPerson(
 }
 
 export async function updatePerson(id: ID, patch: Partial<Omit<Person, "id" | "createdAt">>) {
-  await getDb().people.update(id, { ...patch, updatedAt: now() });
+  const db = getDb();
+  if (patch.name) {
+    const nameTrimmed = patch.name.trim();
+    await db.transaction("rw", db.people, async () => {
+      const existing = await db.people
+        .filter((p) => p.name.toLowerCase() === nameTrimmed.toLowerCase() && p.id !== id)
+        .first();
+      if (existing) {
+        throw new Error(`A person named "${nameTrimmed}" already exists.`);
+      }
+      await db.people.update(id, { ...patch, name: nameTrimmed, updatedAt: now() });
+    });
+  } else {
+    await db.people.update(id, { ...patch, updatedAt: now() });
+  }
 }
 
 export async function deletePerson(id: ID) {
