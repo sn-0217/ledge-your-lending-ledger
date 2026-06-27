@@ -152,9 +152,9 @@ function ChittiCard({
   fmt: (n: number) => string;
   index: number;
 }) {
-  const status = STATUS_META[chitti.status];
+  const status = STATUS_META[chitti.status as keyof typeof STATUS_META] ?? STATUS_META.active;
   const StatusIcon = status.icon;
-  const monthly = chitti.monthlyAmount * chitti.numChits;
+  const monthly = (chitti.monthlyAmount ?? 0) * (chitti.numChits ?? 1);
 
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>

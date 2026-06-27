@@ -68,11 +68,22 @@ function ChittiDetail() {
     return <div className="h-40 animate-pulse rounded-3xl bg-muted/30 mt-2" />;
   }
 
+  // Guard: chitti loaded but record is invalid/stale schema
+  if (!chitti.organizerId) {
+    return (
+      <GlassCard className="p-6 text-center text-sm text-muted-foreground">
+        This chitti record is from an old format. Please delete it and re-create it.
+        <Link to="/chitti" className="mt-3 block text-primary">← Back to Chitti</Link>
+      </GlassCard>
+    );
+  }
+
   const organizer = peopleById.get(chitti.organizerId);
-  const monthlyTotal = chitti.monthlyAmount * chitti.numChits;
+  const monthlyTotal = (chitti.monthlyAmount ?? 0) * (chitti.numChits ?? 1);
   const paid = paidMonths.size;
   const totalMonths = chitti.totalMonths;
-  const status = STATUS_META[chitti.status];
+  // Fallback for records with no status (old schema)
+  const status = STATUS_META[chitti.status as keyof typeof STATUS_META] ?? STATUS_META.active;
   const StatusIcon = status.icon;
 
   function monthLabel(month: number) {
