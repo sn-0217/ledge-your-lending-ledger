@@ -402,11 +402,7 @@ function CategoryBlock({
                 No entries yet.
               </div>
             ) : (
-              <ul className="divide-y divide-border/60">
-                {txs.map((t) => (
-                  <TxRow key={t.id} tx={t} />
-                ))}
-              </ul>
+              <TxList txs={txs} />
             )}
           </div>
         </CollapsibleContent>
@@ -438,10 +434,35 @@ const TYPE_META: Record<TransactionType, { label: string; sign: "in" | "out" }> 
   repayment_out: { label: "Paid", sign: "out" },
 };
 
+const INITIAL_VISIBLE = 3;
+
+function TxList({ txs }: { txs: Transaction[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? txs : txs.slice(0, INITIAL_VISIBLE);
+  return (
+    <>
+      <ul className="divide-y divide-border/60">
+        {visible.map((t) => (
+          <TxRow key={t.id} tx={t} />
+        ))}
+      </ul>
+      {txs.length > INITIAL_VISIBLE && (
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="mt-1 w-full rounded-xl py-1.5 text-center text-xs font-medium text-primary hover:underline"
+        >
+          {showAll ? "Show less" : `Show all ${txs.length} entries`}
+        </button>
+      )}
+    </>
+  );
+}
+
 function TxRow({ tx }: { tx: Transaction }) {
   const fmt = useFormatMoney();
   const meta = TYPE_META[tx.type];
   const positive = tx.type === "lent" || tx.type === "repayment_out";
+  const [editOpen, setEditOpen] = useState(false);
   return (
     <li className="flex items-center gap-3 py-2.5">
       <div
@@ -479,6 +500,29 @@ function TxRow({ tx }: { tx: Transaction }) {
           {fmt(tx.amount)}
         </div>
       </div>
+
+      {/* Edit */}
+      <Sheet open={editOpen} onOpenChange={setEditOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="glass-strong max-h-[92dvh] overflow-y-auto rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle>Edit entry</SheetTitle>
+          </SheetHeader>
+          <div className="pt-4">
+            <TransactionForm
+              type={tx.type}
+              transaction={tx}
+              onSubmitted={() => setEditOpen(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground">

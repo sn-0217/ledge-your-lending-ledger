@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/people/")({
   head: () => ({ meta: [{ title: "People — Ledge" }] }),
@@ -25,15 +24,12 @@ function PeoplePage() {
   const rows = useAllPersonRows();
   const fmt = useFormatMoney();
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"active" | "older">("active");
 
   const filtered = useMemo(() => {
     if (!rows) return [];
     const needle = q.trim().toLowerCase();
     return rows
       .filter((r) => {
-        if (tab === "active" && r.balance.settled) return false;
-        if (tab === "older" && !r.balance.settled) return false;
         if (!needle) return true;
         return (
           r.person.name.toLowerCase().includes(needle) ||
@@ -41,7 +37,7 @@ function PeoplePage() {
         );
       })
       .sort((a, b) => b.balance.lastActivity - a.balance.lastActivity);
-  }, [rows, q, tab]);
+  }, [rows, q]);
 
   if (!rows) return <div className="space-y-3 pt-4"><div className="h-12 animate-pulse rounded-full bg-muted/30" /><div className="h-20 animate-pulse rounded-2xl bg-muted/30" /></div>;
 
@@ -62,22 +58,11 @@ function PeoplePage() {
         />
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "older")}>
-        <TabsList className="glass w-full rounded-full">
-          <TabsTrigger value="active" className="flex-1 rounded-full">
-            Active
-          </TabsTrigger>
-          <TabsTrigger value="older" className="flex-1 rounded-full">
-            Older
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       {filtered.length === 0 ? (
         <GlassCard className="p-8 text-center text-sm text-muted-foreground">
           {rows.length === 0
             ? "No people yet. Tap + to add someone."
-            : "Nothing here. Try the other tab or change your search."}
+            : "No results. Try a different search."}
         </GlassCard>
       ) : (
         <ul className="space-y-2">

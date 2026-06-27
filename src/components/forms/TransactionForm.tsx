@@ -14,8 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePeople, useCategoriesFor } from "@/lib/queries";
-import { createCategory, createTransaction } from "@/lib/repositories";
-import type { TransactionType } from "@/lib/types";
+import { createCategory, createTransaction, updateTransaction } from "@/lib/repositories";
+import type { Transaction, TransactionType } from "@/lib/types";
 import { toast } from "sonner";
 
 const schema = z.object({
@@ -35,6 +35,8 @@ export interface TransactionFormProps {
   type: TransactionType;
   defaultPersonId?: string;
   defaultCategoryId?: string;
+  /** When provided the form operates in edit mode */
+  transaction?: Transaction;
   onSubmitted?: () => void;
 }
 
@@ -57,20 +59,24 @@ export function TransactionForm({
   type,
   defaultPersonId,
   defaultCategoryId,
+  transaction,
   onSubmitted,
 }: TransactionFormProps) {
   const people = usePeople();
+  const isEdit = !!transaction;
   const labels = TYPE_LABELS[type];
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      personId: defaultPersonId ?? "",
-      categoryId: defaultCategoryId ?? "",
-      amount: undefined as unknown as number,
-      date: todayISO(),
-      dueDate: "",
-      notes: "",
+      personId: transaction?.personId ?? defaultPersonId ?? "",
+      categoryId: transaction?.categoryId ?? defaultCategoryId ?? "",
+      amount: transaction?.amount ?? (undefined as unknown as number),
+      date: transaction ? new Date(transaction.date).toISOString().slice(0, 10) : todayISO(),
+      dueDate: transaction?.dueDate
+        ? new Date(transaction.dueDate).toISOString().slice(0, 10)
+        : "",
+      notes: transaction?.notes ?? "",
     },
   });
 
@@ -104,16 +110,26 @@ export function TransactionForm({
 
   async function onSubmit(values: TransactionFormValues) {
     try {
-      await createTransaction({
-        personId: values.personId,
-        categoryId: values.categoryId,
-        type,
-        amount: Number(values.amount),
-        date: new Date(values.date).getTime(),
-        dueDate: values.dueDate ? new Date(values.dueDate).getTime() : undefined,
-        notes: values.notes?.trim() || undefined,
-      });
-      toast.success(labels.success);
+      if (isEdit && transaction) {
+        await updateTransaction(transaction.id, {
+          amount: Number(values.amount),
+          date: new Date(values.date).getTime(),
+          dueDate: values.dueDate ? new Date(values.dueDate).getTime() : undefined,
+          notes: values.notes?.trim() || undefined,
+        });
+        toast.success("Entry updated");
+      } else {
+        await createTransaction({
+          personId: values.personId,
+          categoryId: values.categoryId,
+          type,
+          amount: Number(values.amount),
+          date: new Date(values.date).getTime(),
+          dueDate: values.dueDate ? new Date(values.dueDate).getTime() : undefined,
+          notes: values.notes?.trim() || undefined,
+        });
+        toast.success(labels.success);
+      }
       onSubmitted?.();
     } catch (e) {
       toast.error((e as Error).message ?? "Could not save");
@@ -230,7 +246,7 @@ export function TransactionForm({
       </div>
 
       <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-        {labels.cta}
+        {isEdit ? "Save changes" : labels.cta}
       </Button>
     </form>
   );
