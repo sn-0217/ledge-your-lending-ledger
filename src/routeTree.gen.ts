@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PeopleIndexRouteImport } from './routes/people.index'
 
 const PeopleRoute = PeopleRouteImport.update({
   id: '/people',
@@ -22,31 +23,38 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PeopleIndexRoute = PeopleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PeopleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/people': typeof PeopleRoute
+  '/people': typeof PeopleRouteWithChildren
+  '/people/': typeof PeopleIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/people': typeof PeopleRoute
+  '/people': typeof PeopleIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/people': typeof PeopleRoute
+  '/people': typeof PeopleRouteWithChildren
+  '/people/': typeof PeopleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/people'
+  fullPaths: '/' | '/people' | '/people/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/people'
-  id: '__root__' | '/' | '/people'
+  id: '__root__' | '/' | '/people' | '/people/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  PeopleRoute: typeof PeopleRoute
+  PeopleRoute: typeof PeopleRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +73,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/people/': {
+      id: '/people/'
+      path: '/'
+      fullPath: '/people/'
+      preLoaderRoute: typeof PeopleIndexRouteImport
+      parentRoute: typeof PeopleRoute
+    }
   }
 }
 
+interface PeopleRouteChildren {
+  PeopleIndexRoute: typeof PeopleIndexRoute
+}
+
+const PeopleRouteChildren: PeopleRouteChildren = {
+  PeopleIndexRoute: PeopleIndexRoute,
+}
+
+const PeopleRouteWithChildren =
+  PeopleRoute._addFileChildren(PeopleRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  PeopleRoute: PeopleRoute,
+  PeopleRoute: PeopleRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
