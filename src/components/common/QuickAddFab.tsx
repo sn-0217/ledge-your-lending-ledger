@@ -47,7 +47,7 @@ export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
         whileHover={{ scale: 1.06 }}
         transition={{ type: "spring", stiffness: 400, damping: 22 }}
         onClick={() => setOpen(true)}
-        className="fixed bottom-[6.5rem] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.78_0.17_155/0.7)]"
+        className="fixed bottom-[calc(5rem+max(env(safe-area-inset-bottom),0.75rem))] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.78_0.17_155/0.7)]"
         aria-label="Quick add"
       >
         <Plus className="h-6 w-6" strokeWidth={2.5} />

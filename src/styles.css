@@ -130,6 +130,7 @@
   body,
   #root {
     height: 100%;
+    overflow: hidden; /* prevent page-level scrollbar from causing layout shift */
   }
 
   body {
