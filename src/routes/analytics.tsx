@@ -268,6 +268,7 @@ function Analytics() {
             </ResponsiveContainer>
           </div>
         </GlassCard>
+      )}
 
       {/* Outstanding distribution pie */}
       {pieData.length > 0 && (
