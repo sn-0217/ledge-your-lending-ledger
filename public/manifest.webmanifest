@@ -1,0 +1,19 @@
+{
+  "name": "Ledge — Personal Money & Debt Manager",
+  "short_name": "Ledge",
+  "description": "Track money you lent, borrowed, and repaid. Offline-first, private.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
