@@ -3,13 +3,9 @@ import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useSettings } from "@/stores/settings";
 import { getDb } from "@/lib/db";
 import { toast } from "sonner";
-import { Download, Upload, Moon, Trash2 } from "lucide-react";
+import { Download, Upload, Trash2, Info } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,40 +108,18 @@ async function clearAllData() {
 }
 
 function Settings() {
-  const { currency, setCurrency, theme, setTheme } = useSettings();
-
   return (
     <div className="space-y-5">
       <header className="pt-2">
         <h1 className="text-2xl font-bold">Settings</h1>
       </header>
 
-      <GlassCard className="space-y-4 p-4">
-        <h2 className="text-sm font-semibold text-muted-foreground">Preferences</h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <Label className="flex items-center gap-2">
-              <Moon className="h-4 w-4" /> AMOLED dark
-            </Label>
-            <p className="text-xs text-muted-foreground">Pure black background.</p>
-          </div>
-          <Switch
-            checked={theme === "dark"}
-            onCheckedChange={(v) => setTheme(v ? "dark" : "light")}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Currency symbol</Label>
-          <Input
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value.slice(0, 3))}
-            className="max-w-[120px]"
-          />
-        </div>
-      </GlassCard>
-
+      {/* Backup & Restore */}
       <GlassCard className="space-y-3 p-4">
-        <h2 className="text-sm font-semibold text-muted-foreground">Backup</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">Backup &amp; Restore</h2>
+        <p className="text-xs text-muted-foreground">
+          Export your data to keep a local copy, or import a previous backup.
+        </p>
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
@@ -185,7 +159,7 @@ function Settings() {
               if (!file) return;
               try {
                 await importJSON(file);
-                toast.success("Imported");
+                toast.success("Imported successfully");
               } catch (err) {
                 toast.error((err as Error).message);
               } finally {
@@ -195,11 +169,12 @@ function Settings() {
           />
         </label>
         <p className="text-[11px] text-muted-foreground">
-          Google Drive sync is on the roadmap — backups today are fully local.
+          All data is stored locally on your device. Export regularly to avoid data loss.
         </p>
       </GlassCard>
 
-      <GlassCard className="space-y-3 p-4 border border-destructive/30">
+      {/* Danger Zone */}
+      <GlassCard className="space-y-3 border border-destructive/30 p-4">
         <h2 className="text-sm font-semibold text-destructive">Danger Zone</h2>
         <p className="text-xs text-muted-foreground">
           Permanently deletes all people, categories, and transactions. This cannot be undone.
@@ -238,9 +213,16 @@ function Settings() {
         </AlertDialog>
       </GlassCard>
 
-      <GlassCard className="space-y-1 p-4 text-xs text-muted-foreground">
-        <div>Ledge · personal money & debt manager</div>
-        <div>Built with TanStack Start, Dexie, Tailwind v4, Framer Motion.</div>
+      {/* About */}
+      <GlassCard className="flex items-start gap-3 p-4">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+          <Info className="h-4 w-4" />
+        </div>
+        <div className="space-y-0.5 text-xs text-muted-foreground">
+          <div className="font-semibold text-foreground">Ledge</div>
+          <div>Personal money &amp; debt manager</div>
+          <div className="pt-1">All data stays on your device. No accounts. No cloud.</div>
+        </div>
       </GlassCard>
     </div>
   );
