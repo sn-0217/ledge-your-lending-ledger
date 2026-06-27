@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as ChittiRouteImport } from './routes/chitti'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PeopleIndexRouteImport } from './routes/people.index'
 import { Route as PeoplePersonIdRouteImport } from './routes/people.$personId'
@@ -23,6 +24,11 @@ const PeopleRoute = PeopleRouteImport.update({
 const ChittiRoute = ChittiRouteImport.update({
   id: '/chitti',
   path: '/chitti',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +49,7 @@ const PeoplePersonIdRoute = PeoplePersonIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/chitti': typeof ChittiRoute
   '/people': typeof PeopleRouteWithChildren
   '/people/$personId': typeof PeoplePersonIdRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/chitti': typeof ChittiRoute
   '/people/$personId': typeof PeoplePersonIdRoute
   '/people': typeof PeopleIndexRoute
@@ -57,6 +65,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/chitti': typeof ChittiRoute
   '/people': typeof PeopleRouteWithChildren
   '/people/$personId': typeof PeoplePersonIdRoute
@@ -64,12 +73,19 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chitti' | '/people' | '/people/$personId' | '/people/'
+  fullPaths:
+    | '/'
+    | '/analytics'
+    | '/chitti'
+    | '/people'
+    | '/people/$personId'
+    | '/people/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chitti' | '/people/$personId' | '/people'
+  to: '/' | '/analytics' | '/chitti' | '/people/$personId' | '/people'
   id:
     | '__root__'
     | '/'
+    | '/analytics'
     | '/chitti'
     | '/people'
     | '/people/$personId'
@@ -78,6 +94,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   ChittiRoute: typeof ChittiRoute
   PeopleRoute: typeof PeopleRouteWithChildren
 }
@@ -96,6 +113,13 @@ declare module '@tanstack/react-router' {
       path: '/chitti'
       fullPath: '/chitti'
       preLoaderRoute: typeof ChittiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -137,6 +161,7 @@ const PeopleRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyticsRoute: AnalyticsRoute,
   ChittiRoute: ChittiRoute,
   PeopleRoute: PeopleRouteWithChildren,
 }
