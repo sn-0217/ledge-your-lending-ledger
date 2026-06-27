@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PeopleIndexRouteImport } from './routes/people.index'
+import { Route as PeoplePersonIdRouteImport } from './routes/people.$personId'
 
 const PeopleRoute = PeopleRouteImport.update({
   id: '/people',
@@ -28,28 +29,36 @@ const PeopleIndexRoute = PeopleIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PeopleRoute,
 } as any)
+const PeoplePersonIdRoute = PeoplePersonIdRouteImport.update({
+  id: '/$personId',
+  path: '/$personId',
+  getParentRoute: () => PeopleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/people': typeof PeopleRouteWithChildren
+  '/people/$personId': typeof PeoplePersonIdRoute
   '/people/': typeof PeopleIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/people/$personId': typeof PeoplePersonIdRoute
   '/people': typeof PeopleIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/people': typeof PeopleRouteWithChildren
+  '/people/$personId': typeof PeoplePersonIdRoute
   '/people/': typeof PeopleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/people' | '/people/'
+  fullPaths: '/' | '/people' | '/people/$personId' | '/people/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/people'
-  id: '__root__' | '/' | '/people' | '/people/'
+  to: '/' | '/people/$personId' | '/people'
+  id: '__root__' | '/' | '/people' | '/people/$personId' | '/people/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -80,14 +89,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PeopleIndexRouteImport
       parentRoute: typeof PeopleRoute
     }
+    '/people/$personId': {
+      id: '/people/$personId'
+      path: '/$personId'
+      fullPath: '/people/$personId'
+      preLoaderRoute: typeof PeoplePersonIdRouteImport
+      parentRoute: typeof PeopleRoute
+    }
   }
 }
 
 interface PeopleRouteChildren {
+  PeoplePersonIdRoute: typeof PeoplePersonIdRoute
   PeopleIndexRoute: typeof PeopleIndexRoute
 }
 
 const PeopleRouteChildren: PeopleRouteChildren = {
+  PeoplePersonIdRoute: PeoplePersonIdRoute,
   PeopleIndexRoute: PeopleIndexRoute,
 }
 
