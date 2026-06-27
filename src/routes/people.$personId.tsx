@@ -16,16 +16,9 @@ import {
   renameCategory,
 } from "@/lib/repositories";
 import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
-import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import {
   Collapsible,
@@ -55,6 +48,61 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+
+/** Bottom sheet on mobile, centered card on sm+ screens */
+function WebModal({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0, y: 32 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 32 }}
+            transition={{ type: "spring", stiffness: 340, damping: 32 }}
+            className={cn(
+              "glass-strong fixed z-50 overflow-y-auto",
+              "bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-3xl px-4 pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-4",
+              "sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85dvh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:px-6 sm:pb-6 sm:pt-6",
+            )}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold">{title}</h2>
+              <button
+                onClick={onClose}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/50 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {children}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
 
 export const Route = createFileRoute("/people/$personId")({
   head: () => ({ meta: [{ title: "Person — Ledge" }] }),
@@ -123,21 +171,12 @@ function PersonDetail() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="flex-1" />
-        <Sheet open={editing} onOpenChange={setEditing}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="glass-strong rounded-t-3xl">
-            <SheetHeader>
-              <SheetTitle>Edit person</SheetTitle>
-            </SheetHeader>
-            <div className="pt-4">
-              <PersonForm person={person} onSubmitted={() => setEditing(false)} />
-            </div>
-          </SheetContent>
-        </Sheet>
+        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setEditing(true)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <WebModal open={editing} onClose={() => setEditing(false)} title="Edit person">
+          <PersonForm person={person} onSubmitted={() => setEditing(false)} />
+        </WebModal>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full text-destructive">
@@ -243,22 +282,29 @@ function AddCategoryButton({ personId }: { personId: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <button className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary">
-          <Plus className="h-3 w-3" /> Category
-        </button>
-      </SheetTrigger>
-      <SheetContent side="bottom" className="glass-strong rounded-t-3xl">
-        <SheetHeader>
-          <SheetTitle>Add category</SheetTitle>
-        </SheetHeader>
-        <div className="space-y-3 pt-4">
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary"
+      >
+        <Plus className="h-3 w-3" /> Category
+      </button>
+      <WebModal open={open} onClose={() => setOpen(false)} title="Add category">
+        <div className="space-y-3">
           <Input
             autoFocus
             placeholder="e.g. Gold Loan"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && name.trim()) {
+                createCategory(personId, name).then(() => {
+                  toast.success("Category added");
+                  setName("");
+                  setOpen(false);
+                });
+              }
+            }}
           />
           <Button
             className="w-full"
@@ -273,8 +319,8 @@ function AddCategoryButton({ personId }: { personId: string }) {
             Add
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </WebModal>
+    </>
   );
 }
 
@@ -408,21 +454,14 @@ function CategoryBlock({
         </CollapsibleContent>
       </Collapsible>
 
-      <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent side="bottom" className="glass-strong max-h-[92dvh] overflow-y-auto rounded-t-3xl">
-          <SheetHeader>
-            <SheetTitle>Add entry</SheetTitle>
-          </SheetHeader>
-          <div className="pt-4">
-            <TransactionForm
-              type={addType}
-              defaultPersonId={personId}
-              defaultCategoryId={category.id}
-              onSubmitted={() => setAddOpen(false)}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <WebModal open={addOpen} onClose={() => setAddOpen(false)} title="Add entry">
+        <TransactionForm
+          type={addType}
+          defaultPersonId={personId}
+          defaultCategoryId={category.id}
+          onSubmitted={() => setAddOpen(false)}
+        />
+      </WebModal>
     </GlassCard>
   );
 }
@@ -502,25 +541,21 @@ function TxRow({ tx }: { tx: Transaction }) {
       </div>
 
       {/* Edit */}
-      <Sheet open={editOpen} onOpenChange={setEditOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground">
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="glass-strong max-h-[92dvh] overflow-y-auto rounded-t-3xl">
-          <SheetHeader>
-            <SheetTitle>Edit entry</SheetTitle>
-          </SheetHeader>
-          <div className="pt-4">
-            <TransactionForm
-              type={tx.type}
-              transaction={tx}
-              onSubmitted={() => setEditOpen(false)}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 rounded-full text-muted-foreground"
+        onClick={() => setEditOpen(true)}
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </Button>
+      <WebModal open={editOpen} onClose={() => setEditOpen(false)} title="Edit entry">
+        <TransactionForm
+          type={tx.type}
+          transaction={tx}
+          onSubmitted={() => setEditOpen(false)}
+        />
+      </WebModal>
 
       {/* Delete */}
       <AlertDialog>
