@@ -9,7 +9,18 @@ import { Switch } from "@/components/ui/switch";
 import { useSettings } from "@/stores/settings";
 import { getDb } from "@/lib/db";
 import { toast } from "sonner";
-import { Download, Upload, Moon } from "lucide-react";
+import { Download, Upload, Moon, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — Ledge" }] }),
@@ -88,6 +99,15 @@ async function importJSON(file: File) {
     if (data.people) await db.people.bulkPut(data.people);
     if (data.categories) await db.categories.bulkPut(data.categories);
     if (data.transactions) await db.transactions.bulkPut(data.transactions);
+  });
+}
+
+async function clearAllData() {
+  const db = getDb();
+  await db.transaction("rw", db.people, db.categories, db.transactions, async () => {
+    await db.transactions.clear();
+    await db.categories.clear();
+    await db.people.clear();
   });
 }
 
@@ -177,6 +197,45 @@ function Settings() {
         <p className="text-[11px] text-muted-foreground">
           Google Drive sync is on the roadmap — backups today are fully local.
         </p>
+      </GlassCard>
+
+      <GlassCard className="space-y-3 p-4 border border-destructive/30">
+        <h2 className="text-sm font-semibold text-destructive">Danger Zone</h2>
+        <p className="text-xs text-muted-foreground">
+          Permanently deletes all people, categories, and transactions. This cannot be undone.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" className="w-full gap-2">
+              <Trash2 className="h-4 w-4" /> Clear all data
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="glass-strong">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear all data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete every person, category, and transaction. There is no undo.
+                Export a backup first if you want to keep your data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={async () => {
+                  try {
+                    await clearAllData();
+                    toast.success("All data cleared");
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  }
+                }}
+              >
+                Yes, delete everything
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </GlassCard>
 
       <GlassCard className="space-y-1 p-4 text-xs text-muted-foreground">

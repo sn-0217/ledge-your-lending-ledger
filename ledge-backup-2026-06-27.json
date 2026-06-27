@@ -1,0 +1,155 @@
+{
+  "app": "ledge",
+  "version": 1,
+  "exportedAt": "2026-06-27T17:51:00.000Z",
+  "people": [
+    {
+      "id": "283e9c66-f677-41a6-bc45-79661702c420",
+      "name": "pavan",
+      "tags": ["friends"],
+      "createdAt": 1782577823658,
+      "updatedAt": 1782577823658
+    },
+    {
+      "id": "4f8a2da2-19f2-445c-b0f6-8ca689bd8fbf",
+      "name": "likki",
+      "tags": ["family"],
+      "createdAt": 1782577775135,
+      "updatedAt": 1782577775135
+    },
+    {
+      "id": "608fbbb1-deba-4ea7-8c62-bcd40636ca7f",
+      "name": "narendra",
+      "tags": ["friends"],
+      "createdAt": 1782577893350,
+      "updatedAt": 1782577893350
+    },
+    {
+      "id": "e250024e-3b33-4f3e-a520-562e2529593f",
+      "name": "chinna",
+      "tags": ["friends"],
+      "createdAt": 1782577945615,
+      "updatedAt": 1782577945615
+    },
+    {
+      "id": "f7adfb60-3371-4bf8-8f2e-30fbb5739868",
+      "name": "santhu",
+      "tags": ["family"],
+      "notes": "urkane saradaga",
+      "createdAt": 1782577714760,
+      "updatedAt": 1782577714760
+    }
+  ],
+  "categories": [
+    {
+      "id": "general-pavan",
+      "personId": "283e9c66-f677-41a6-bc45-79661702c420",
+      "name": "General",
+      "createdAt": 1782577823658,
+      "updatedAt": 1782577823658
+    },
+    {
+      "id": "general-likki",
+      "personId": "4f8a2da2-19f2-445c-b0f6-8ca689bd8fbf",
+      "name": "General",
+      "createdAt": 1782577775135,
+      "updatedAt": 1782577775135
+    },
+    {
+      "id": "general-narendra",
+      "personId": "608fbbb1-deba-4ea7-8c62-bcd40636ca7f",
+      "name": "General",
+      "createdAt": 1782577893350,
+      "updatedAt": 1782577893350
+    },
+    {
+      "id": "general-chinna",
+      "personId": "e250024e-3b33-4f3e-a520-562e2529593f",
+      "name": "General",
+      "createdAt": 1782577945615,
+      "updatedAt": 1782577945615
+    },
+    {
+      "id": "general-santhu",
+      "personId": "f7adfb60-3371-4bf8-8f2e-30fbb5739868",
+      "name": "General",
+      "createdAt": 1782577714760,
+      "updatedAt": 1782577714760
+    }
+  ],
+  "transactions": [
+    {
+      "id": "02e8ffdc-0ea1-4349-bd6d-1e3bb33099e9",
+      "personId": "283e9c66-f677-41a6-bc45-79661702c420",
+      "categoryId": "general-pavan",
+      "type": "borrowed",
+      "amount": 15000,
+      "date": 1782518400000,
+      "createdAt": 1782577849649,
+      "updatedAt": 1782577849649
+    },
+    {
+      "id": "ad00b038-9a5f-44cd-ac07-2db9330ae6d0",
+      "personId": "283e9c66-f677-41a6-bc45-79661702c420",
+      "categoryId": "general-pavan",
+      "type": "borrowed",
+      "amount": 10000,
+      "date": 1782518400000,
+      "createdAt": 1782577839284,
+      "updatedAt": 1782577839284
+    },
+    {
+      "id": "e0ca5ff9-fd23-4239-9df6-1868adda78ba",
+      "personId": "283e9c66-f677-41a6-bc45-79661702c420",
+      "categoryId": "general-pavan",
+      "type": "lent",
+      "amount": 1000,
+      "date": 1782518400000,
+      "notes": "returned for hair treatment",
+      "createdAt": 1782578054200,
+      "updatedAt": 1782578054200
+    },
+    {
+      "id": "6a11abec-9b2d-4410-98c9-3502682b10b5",
+      "personId": "4f8a2da2-19f2-445c-b0f6-8ca689bd8fbf",
+      "categoryId": "general-likki",
+      "type": "lent",
+      "amount": 17500,
+      "date": 1782518400000,
+      "createdAt": 1782577795748,
+      "updatedAt": 1782577795748
+    },
+    {
+      "id": "624c54f5-2e8d-4aa9-a454-7e58d5514a71",
+      "personId": "608fbbb1-deba-4ea7-8c62-bcd40636ca7f",
+      "categoryId": "general-narendra",
+      "type": "lent",
+      "amount": 100000,
+      "date": 1782518400000,
+      "createdAt": 1782577906946,
+      "updatedAt": 1782577906946
+    },
+    {
+      "id": "0b94e4cc-9c1e-4798-bec7-ea95f14d6566",
+      "personId": "e250024e-3b33-4f3e-a520-562e2529593f",
+      "categoryId": "general-chinna",
+      "type": "lent",
+      "amount": 21000,
+      "date": 1782518400000,
+      "notes": "gave for mobile phone",
+      "createdAt": 1782577962830,
+      "updatedAt": 1782577962830
+    },
+    {
+      "id": "c4f3064d-dff7-4659-91ef-4683775bb542",
+      "personId": "e250024e-3b33-4f3e-a520-562e2529593f",
+      "categoryId": "general-chinna",
+      "type": "lent",
+      "amount": 1400,
+      "date": 1782518400000,
+      "notes": "urgent ask",
+      "createdAt": 1782577986622,
+      "updatedAt": 1782577986622
+    }
+  ]
+}
