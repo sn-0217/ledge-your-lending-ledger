@@ -171,3 +171,45 @@ if (typeof window !== "undefined") {
     setSyncStatus("unauthorized", "Session expired. Please sign in again.");
   });
 }
+
+import { importBackupPayload } from "./backupService";
+import { toast } from "sonner";
+
+export async function performAutoSyncCheck(queryClient: any) {
+  if (!getAutoSyncEnabled() || !activeProvider.isConfigured()) return;
+
+  try {
+    const info = await activeProvider.getBackupInfo();
+    if (!info || !info.modifiedTime) return;
+
+    const localLastSyncStr = getLastSyncTime();
+    const cloudTime = new Date(info.modifiedTime).getTime();
+    const localTime = localLastSyncStr ? new Date(localLastSyncStr).getTime() : 0;
+
+    // If cloud backup is newer than local last sync timestamp by more than 1 second
+    if (cloudTime > localTime + 1000) {
+      console.log("Found newer backup in cloud. Restoring automatically...");
+      setSyncStatus("syncing");
+      
+      const cloudData = await activeProvider.restore();
+      await importBackupPayload(cloudData);
+      
+      setLastSyncTime(info.modifiedTime);
+      setSyncStatus("synced");
+      
+      // Invalidate queries to reload all views
+      queryClient.invalidateQueries();
+      toast.success("Database updated from Google Drive");
+      
+      setTimeout(() => {
+        if (getSyncStatus() === "synced") setSyncStatus("idle");
+      }, 2500);
+    }
+  } catch (err) {
+    console.warn("Background auto-sync check failed:", err);
+    const msg = err instanceof Error ? err.message : "Sync check failed";
+    if (msg.includes("401") || msg.includes("unauthorized") || msg.includes("authorization")) {
+      setSyncStatus("unauthorized", msg);
+    }
+  }
+}

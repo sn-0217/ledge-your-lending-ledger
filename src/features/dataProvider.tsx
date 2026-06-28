@@ -18,7 +18,7 @@ import type {
   ChittiAvailedSlot,
 } from "@/lib/types";
 import { toast } from "sonner";
-import { handleDataChanged } from "./backup/syncService";
+import { handleDataChanged, performAutoSyncCheck } from "./backup/syncService";
 import { getDatabaseBackupPayload } from "./backup/backupService";
 
 // Types for undo actions
@@ -78,6 +78,24 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [lastDeleted, setLastDeleted] = useState<DeletedItem | null>(null);
+
+  // Background automatic sync checks
+  React.useEffect(() => {
+    // Delay slightly on startup to let initial queries settle
+    const startupTimer = setTimeout(() => {
+      performAutoSyncCheck(queryClient);
+    }, 1500);
+
+    // Periodic scheduled check every 30 seconds
+    const intervalId = setInterval(() => {
+      performAutoSyncCheck(queryClient);
+    }, 30000);
+
+    return () => {
+      clearTimeout(startupTimer);
+      clearInterval(intervalId);
+    };
+  }, [queryClient]);
 
   // Helper to trigger auto-sync
   const triggerAutoSync = () => {
