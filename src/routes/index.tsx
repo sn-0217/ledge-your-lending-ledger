@@ -20,7 +20,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
@@ -265,16 +264,10 @@ function Dashboard() {
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
+      <div>
         {searchResults ? (
           /* SEARCH RESULTS STATE */
-          <motion.div
-            key="search-results"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
-          >
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-150 ease-out">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Search Results</h2>
               <button onClick={() => setSearchQuery("")} className="text-xs text-primary">Clear search</button>
@@ -373,22 +366,12 @@ function Dashboard() {
                   No matching records found for "{searchQuery}".
                 </GlassCard>
               )}
-          </motion.div>
+          </div>
         ) : (
           /* STANDARD DASHBOARD STATE */
-          <motion.div
-            key="dashboard-content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="space-y-4"
-          >
+          <div className="space-y-4 animate-in fade-in duration-150 ease-out">
             {/* Net balance hero */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 280, damping: 26 }}
-            >
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out">
               <GlassCard strong className="relative overflow-hidden p-5">
                 {/* Ambient glow */}
                 <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-primary/12 blur-3xl" />
@@ -437,11 +420,9 @@ function Dashboard() {
                       <span className="tabular-nums font-medium text-foreground">{Math.round(recovery)}%</span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${recovery}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-                        className="h-full rounded-full bg-[oklch(0.78_0.17_155)]"
+                      <div
+                        className="h-full rounded-full bg-[oklch(0.78_0.17_155)] transition-[width] duration-700 ease-out"
+                        style={{ width: `${recovery}%` }}
                       />
                     </div>
                     <p className="mt-1 text-[10px] text-muted-foreground">
@@ -450,12 +431,12 @@ function Dashboard() {
                   </div>
                 )}
               </GlassCard>
-            </motion.div>
+            </div>
 
 
             {/* Overdue alert */}
             {overdueCount > 0 && (
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }}>
+              <div className="animate-in fade-in zoom-in-95 duration-150 ease-out">
                 <Link to="/people">
                   <GlassCard className="flex items-center gap-3 border border-orange-500/30 p-3.5">
                     <AlertCircle className="h-4 w-4 shrink-0 text-orange-400" />
@@ -466,7 +447,7 @@ function Dashboard() {
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </GlassCard>
                 </Link>
-              </motion.div>
+              </div>
             )}
 
 
@@ -577,9 +558,9 @@ function Dashboard() {
                 </GlassCard>
               </section>
             )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
