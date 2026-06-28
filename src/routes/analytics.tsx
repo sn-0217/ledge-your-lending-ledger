@@ -224,6 +224,8 @@ function Analytics() {
                 <Tooltip
                   cursor={{ stroke: "oklch(0.75 0.15 220 / 0.4)", strokeWidth: 1 }}
                   contentStyle={{ background: "oklch(0.1 0.01 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
+                  itemStyle={{ color: "rgba(255, 255, 255, 0.95)" }}
+                  labelStyle={{ color: "rgba(255, 255, 255, 0.6)" }}
                   formatter={(v: number) => [fmt(v), "Lent"]}
                 />
                 <Area
@@ -254,6 +256,8 @@ function Analytics() {
                 <Tooltip
                   cursor={{ stroke: `${GREEN}66`, strokeWidth: 1 }}
                   contentStyle={{ background: "oklch(0.1 0.01 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
+                  itemStyle={{ color: "rgba(255, 255, 255, 0.95)" }}
+                  labelStyle={{ color: "rgba(255, 255, 255, 0.6)" }}
                   formatter={(v: number) => [fmt(v), "Borrowed"]}
                 />
                 <Line
@@ -287,6 +291,8 @@ function Analytics() {
                   <Tooltip
                     formatter={(v: number) => fmt(v)}
                     contentStyle={{ background: "oklch(0.12 0.012 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
+                    itemStyle={{ color: "rgba(255, 255, 255, 0.95)" }}
+                    labelStyle={{ color: "rgba(255, 255, 255, 0.6)" }}
                   />
                 </PieChart>
               </ResponsiveContainer>

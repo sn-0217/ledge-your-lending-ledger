@@ -3,18 +3,9 @@ import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { WebModal } from "@/components/common/WebModal";
-import {
-  useCategoriesFor,
-  usePerson,
-  useTransactionsFor,
-} from "@/lib/queries";
+import { useLedge } from "@/features/dataProvider";
 import {
   computeCategoryBalance,
-  createCategory,
-  deleteCategory,
-  deletePerson,
-  deleteTransaction,
-  renameCategory,
 } from "@/lib/repositories";
 import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
 import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
@@ -64,9 +55,21 @@ export const Route = createFileRoute("/people/$personId")({
 function PersonDetail() {
   const { personId } = Route.useParams();
   const navigate = useNavigate();
-  const person = usePerson(personId);
-  const cats = useCategoriesFor(personId);
-  const txs = useTransactionsFor(personId);
+  const {
+    people,
+    categories,
+    transactions,
+    deletePerson,
+    deleteTransaction,
+    deleteCategory,
+    createCategory,
+    renameCategory,
+    isLoading,
+  } = useLedge();
+
+  const person = people.find((p) => p.id === personId);
+  const cats = categories.filter((c) => c.personId === personId);
+  const txs = transactions.filter((t) => t.personId === personId);
   const fmt = useFormatMoney();
   const [editing, setEditing] = useState(false);
 
@@ -92,9 +95,10 @@ function PersonDetail() {
     return out;
   }, [categoryRows]);
 
-  if (person === undefined || cats === undefined || txs === undefined) {
+  if (isLoading && !people.length) {
     return <div className="h-40 animate-pulse rounded-3xl bg-muted/30" />;
   }
+
   if (person === null || !person) {
     return (
       <GlassCard className="p-6 text-center text-sm text-muted-foreground">
@@ -227,6 +231,7 @@ function PersonDetail() {
 function AddCategoryButton({ personId }: { personId: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const { createCategory } = useLedge();
   return (
     <>
       <button
@@ -287,6 +292,7 @@ function CategoryBlock({
   const [addType, setAddType] = useState<TransactionType>("lent");
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(category.name);
+  const { renameCategory, deleteCategory } = useLedge();
 
   return (
     <GlassCard className="overflow-hidden">
@@ -448,6 +454,7 @@ function TxRow({ tx }: { tx: Transaction }) {
   const meta = TYPE_META[tx.type];
   const positive = tx.type === "lent" || tx.type === "repayment_out";
   const [editOpen, setEditOpen] = useState(false);
+  const { deleteTransaction } = useLedge();
   return (
     <li className="flex items-center gap-3 py-2.5">
       <div

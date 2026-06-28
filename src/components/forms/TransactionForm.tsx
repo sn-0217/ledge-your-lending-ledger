@@ -13,8 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePeople, useCategoriesFor } from "@/lib/queries";
-import { createCategory, createTransaction, updateTransaction } from "@/lib/repositories";
+import { useLedge } from "@/features/dataProvider";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -62,7 +61,14 @@ export function TransactionForm({
   transaction,
   onSubmitted,
 }: TransactionFormProps) {
-  const people = usePeople();
+  const {
+    people,
+    categories: allCategories,
+    createCategory,
+    createTransaction,
+    updateTransaction,
+  } = useLedge();
+
   const isEdit = !!transaction;
   const labels = TYPE_LABELS[type];
 
@@ -81,7 +87,12 @@ export function TransactionForm({
   });
 
   const personId = form.watch("personId");
-  const categories = useCategoriesFor(personId || undefined);
+  
+  const categories = useMemo(() => {
+    if (!personId) return [];
+    return allCategories.filter((c) => c.personId === personId);
+  }, [allCategories, personId]);
+
   const [creatingCat, setCreatingCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowDownLeft, ArrowUpRight, Plus, RotateCcw, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -26,6 +26,12 @@ const ACTIONS: {
 export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("menu");
+
+  useEffect(() => {
+    const handleOpen = () => setOpen(true);
+    window.addEventListener("ledge:open_quick_add", handleOpen);
+    return () => window.removeEventListener("ledge:open_quick_add", handleOpen);
+  }, []);
 
   function close() {
     setOpen(false);

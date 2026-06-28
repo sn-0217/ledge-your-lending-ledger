@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { createPerson, updatePerson } from "@/lib/repositories";
+import { useLedge } from "@/features/dataProvider";
 import type { Person, PersonTag } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -32,6 +32,7 @@ export function PersonForm({
   person?: Person;
   onSubmitted?: (id: string) => void;
 }) {
+  const { createPerson, updatePerson } = useLedge();
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {

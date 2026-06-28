@@ -7,12 +7,15 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { useSettings } from "@/stores/settings";
+import { DataProvider } from "@/features/dataProvider";
+import { WifiOff } from "lucide-react";
 
 function NotFoundComponent() {
   return (
@@ -125,6 +128,79 @@ function ThemeApplier() {
   return null;
 }
 
+function OfflineIndicator() {
+  const [isOffline, setIsOffline] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const checkActualOnline = async () => {
+      if (typeof navigator === "undefined") return;
+
+      if (!navigator.onLine) {
+        // If navigator says offline, verify with a lightweight connection test
+        try {
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), 3000);
+          
+          await fetch("https://clients3.google.com/generate_204", {
+            method: "HEAD",
+            mode: "no-cors",
+            signal: controller.signal,
+            cache: "no-store",
+          });
+          
+          clearTimeout(id);
+          setIsOffline(false); // Ping succeeded, we are actually online
+        } catch {
+          setIsOffline(true); // Ping failed, we are truly offline
+        }
+      } else {
+        setIsOffline(false);
+      }
+    };
+
+    checkActualOnline();
+
+    // Recheck on network change events
+    const online = () => {
+      setIsOffline(false);
+      setDismissed(false);
+    };
+    const offline = () => {
+      checkActualOnline();
+      setDismissed(false);
+    };
+
+    window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
+    
+    // Check periodically every 15 seconds to ensure status is accurate
+    const interval = setInterval(checkActualOnline, 15000);
+
+    return () => {
+      window.removeEventListener("online", online);
+      window.removeEventListener("offline", offline);
+      clearInterval(interval);
+    };
+  }, []);
+
+  if (!isOffline || dismissed) return null;
+
+  return (
+    <div className="fixed bottom-24 left-1/2 z-[100] -translate-x-1/2 flex items-center gap-2 rounded-full bg-destructive/90 px-3.5 py-1.5 text-xs font-medium text-destructive-foreground shadow-lg backdrop-blur-sm animate-in fade-in slide-in-from-bottom duration-200">
+      <WifiOff className="h-3.5 w-3.5" />
+      <span>Offline Mode</span>
+      <button
+        onClick={() => setDismissed(true)}
+        className="ml-1 flex h-4 w-4 items-center justify-center rounded-full hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -133,17 +209,54 @@ function RootComponent() {
       window.addEventListener("load", () => {
         navigator.serviceWorker
           .register("/sw.js")
-          .then((reg) => console.log("SW registered:", reg.scope))
+          .then((reg) => {
+            console.log("SW registered:", reg.scope);
+            
+            // Check for service worker updates
+            reg.addEventListener("updatefound", () => {
+              const newWorker = reg.installing;
+              if (newWorker) {
+                newWorker.addEventListener("statechange", () => {
+                  if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                    toast.info("Update available! Reload to update Ledge.", {
+                      duration: Infinity,
+                      action: {
+                        label: "Reload",
+                        onClick: () => {
+                          newWorker.postMessage({ type: "SKIP_WAITING" });
+                          window.location.reload();
+                        },
+                      },
+                    });
+                  }
+                });
+              }
+            });
+          })
           .catch((err) => console.error("SW registration failed:", err));
       });
     }
   }, []);
 
+  useEffect(() => {
+    const handleInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      (window as any).deferredInstallPrompt = e;
+      window.dispatchEvent(new CustomEvent("ledge:install_available"));
+    };
+    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeApplier />
-      <Outlet />
+      <DataProvider>
+        <OfflineIndicator />
+        <Outlet />
+      </DataProvider>
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );
 }
+

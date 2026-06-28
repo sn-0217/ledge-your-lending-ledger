@@ -5,11 +5,7 @@ import { ClientOnly } from "@/components/common/ClientOnly";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WebModal } from "@/components/common/WebModal";
-import { useChitti, useChittiPayments } from "@/lib/chittiQueries";
-import { usePeople } from "@/lib/queries";
-import {
-  recordPayment, deletePayment, updateAvailedSlots, updateChittiStatus, deleteChitti,
-} from "@/lib/chittiRepositories";
+import { useLedge } from "@/features/dataProvider";
 import { useFormatMoney, initials } from "@/lib/formatters";
 import {
   ArrowLeft, Check, Trophy, Trash2, CheckCircle2, Clock, XCircle,
@@ -48,9 +44,21 @@ const STATUS_META = {
 function ChittiDetail() {
   const { chittiId } = Route.useParams();
   const navigate = useNavigate();
-  const chitti = useChitti(chittiId);
-  const payments = useChittiPayments(chittiId);
-  const people = usePeople();
+  
+  const {
+    chittis,
+    chittiPayments,
+    people,
+    recordPayment,
+    deletePayment,
+    updateAvailedSlots,
+    updateChittiStatus,
+    deleteChitti,
+    isLoading,
+  } = useLedge();
+
+  const chitti = chittis.find((c) => c.id === chittiId);
+  const payments = chittiPayments.filter((p) => p.chittiId === chittiId);
   const fmt = useFormatMoney();
 
   const [editing, setEditing] = useState(false);
@@ -78,8 +86,19 @@ function ChittiDetail() {
     return new Set(paymentsMap.keys());
   }, [paymentsMap]);
 
-  if (!chitti || !payments || !people) {
+  if (isLoading && !chittis.length) {
     return <div className="h-40 animate-pulse rounded-3xl bg-muted/30 mt-2" />;
+  }
+
+  if (!chitti) {
+    return (
+      <GlassCard className="p-6 text-center text-sm text-muted-foreground">
+        Chitti not found.{" "}
+        <Link to="/chitti" className="text-primary">
+          Back to Chitti
+        </Link>
+      </GlassCard>
+    );
   }
 
   // Guard: chitti loaded but record is invalid/stale schema

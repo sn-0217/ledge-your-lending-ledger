@@ -4,8 +4,7 @@ import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { WebModal } from "@/components/common/WebModal";
 import { Button } from "@/components/ui/button";
-import { useChittis } from "@/lib/chittiQueries";
-import { usePeople } from "@/lib/queries";
+import { useLedge } from "@/features/dataProvider";
 import { useFormatMoney, initials } from "@/lib/formatters";
 import {
   PiggyBank, Plus, ChevronRight, Calendar, Coins,
@@ -35,8 +34,7 @@ const STATUS_META = {
 };
 
 function ChittiList() {
-  const chittis = useChittis();
-  const people = usePeople();
+  const { chittis, people, isLoading } = useLedge();
   const fmt = useFormatMoney();
   const [creating, setCreating] = useState(false);
 
@@ -52,7 +50,7 @@ function ChittiList() {
     return { active: active.length, totalMonthlyDue, totalChits, availed, notAvailed };
   }, [chittis]);
 
-  if (!chittis || !people) {
+  if (isLoading && !chittis.length) {
     return <div className="h-60 animate-pulse rounded-3xl bg-muted/30 mt-2" />;
   }
 

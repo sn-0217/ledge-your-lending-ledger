@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
-import { usePeople } from "@/lib/queries";
-import { createChitti, updateChitti } from "@/lib/chittiRepositories";
+import { useLedge } from "@/features/dataProvider";
 import { initials } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +23,7 @@ interface ChittiFormProps {
 }
 
 export function ChittiForm({ chitti, onDone }: ChittiFormProps) {
-  const people = usePeople();
+  const { people, createChitti, updateChitti } = useLedge();
 
   const [organizerId, setOrganizerId] = useState(chitti?.organizerId ?? "");
   const [name, setName] = useState(chitti?.name ?? "");
