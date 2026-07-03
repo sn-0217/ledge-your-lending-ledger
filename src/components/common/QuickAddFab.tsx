@@ -11,16 +11,16 @@ import { cn } from "@/lib/utils";
 type Mode = "menu" | TransactionType | "person";
 
 const ACTIONS: {
-  type: Exclude<Mode, "menu" | "person">;
+  type: Exclude<Mode, "person" | "menu">;
   label: string;
   icon: typeof ArrowUpRight;
   tone: string;
   bg: string;
 }[] = [
-  { type: "lent", label: "Give money", icon: ArrowUpRight, tone: "text-[oklch(0.78_0.17_155)]", bg: "bg-[oklch(0.78_0.17_155/0.12)]" },
-  { type: "borrowed", label: "Borrow money", icon: ArrowDownLeft, tone: "text-[oklch(0.82_0.16_75)]", bg: "bg-[oklch(0.82_0.16_75/0.12)]" },
-  { type: "repayment_in", label: "Received repayment", icon: RotateCcw, tone: "text-primary", bg: "bg-primary/10" },
-  { type: "repayment_out", label: "Paid repayment", icon: RotateCcw, tone: "text-[oklch(0.7_0.2_22)]", bg: "bg-[oklch(0.7_0.2_22/0.12)]" },
+  { type: "lent", label: "Give money", icon: ArrowUpRight, tone: "text-receive", bg: "bg-receive/12" },
+  { type: "borrowed", label: "Borrow money", icon: ArrowDownLeft, tone: "text-pay", bg: "bg-pay/12" },
+  { type: "repayment_in", label: "Received repayment", icon: RotateCcw, tone: "text-receive", bg: "bg-receive/12" },
+  { type: "repayment_out", label: "Paid repayment", icon: RotateCcw, tone: "text-pay", bg: "bg-pay/12" },
 ];
 
 export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
@@ -53,7 +53,7 @@ export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
         whileHover={{ scale: 1.06 }}
         transition={{ type: "spring", stiffness: 400, damping: 22 }}
         onClick={() => setOpen(true)}
-        className="fixed bottom-[calc(5rem+max(env(safe-area-inset-bottom),0.75rem))] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_20px_50px_-15px_oklch(0.78_0.17_155/0.7)]"
+        className="fixed bottom-[calc(5rem+max(env(safe-area-inset-bottom),0.75rem))] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_20px_50px_-15px_var(--primary)/70]"
         aria-label="Quick add"
       >
         <Plus className="h-6 w-6" strokeWidth={2.5} />

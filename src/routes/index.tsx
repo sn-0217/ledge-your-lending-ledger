@@ -425,7 +425,7 @@ function Dashboard() {
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 border border-white/5">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-[oklch(0.78_0.17_155)] to-primary transition-[width] duration-1000 ease-out"
+                        className="h-full rounded-full bg-gradient-to-r from-receive to-primary transition-[width] duration-1000 ease-out"
                         style={{ width: `${recovery}%` }}
                       />
                     </div>
@@ -539,8 +539,8 @@ function Dashboard() {
                         <div className={cn(
                           "grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold",
                           positive
-                            ? "bg-[oklch(0.78_0.17_155/0.18)] text-[oklch(0.85_0.18_155)]"
-                            : "bg-[oklch(0.78_0.22_22/0.18)] text-[oklch(0.85_0.22_22)]",
+                            ? "bg-receive/18 text-receive"
+                            : "bg-pay/18 text-pay",
                         )}>
                           {t.person ? initials(t.person.name) : "?"}
                         </div>
@@ -552,7 +552,7 @@ function Dashboard() {
                         </div>
                         <div className={cn(
                           "text-sm font-semibold tabular-nums",
-                          positive ? "text-[oklch(0.85_0.18_155)]" : "text-[oklch(0.78_0.22_22)]"
+                          positive ? "text-receive" : "text-pay"
                         )}>
                           {positive ? "+" : "−"}{fmt(t.amount)}
                         </div>
@@ -576,14 +576,14 @@ function AttentionCard({ row, tone, fmt }: { row: PersonRow; tone: "receive" | "
     <Link to="/people/$personId" params={{ personId: row.person.id }}>
       <GlassCard className={cn(
         "flex items-center gap-4 p-4 transition-transform active:scale-[0.98] card-glowing-border rounded-2xl",
-        isReceive ? "border-[oklch(0.78_0.17_155/0.2)]" : "border-[oklch(0.78_0.22_22/0.2)]"
+        isReceive ? "border-receive/20" : "border-pay/20"
       )}>
         {/* Avatar */}
         <div className={cn(
           "grid h-12 w-12 shrink-0 place-items-center rounded-xl text-base font-bold transition-all",
           isReceive
-            ? "bg-gradient-to-br from-[oklch(0.78_0.17_155/0.2)] to-[oklch(0.78_0.17_155/0.05)] border border-[oklch(0.78_0.17_155/0.15)] text-[oklch(0.85_0.18_155)]"
-            : "bg-gradient-to-br from-[oklch(0.78_0.22_22/0.2)] to-[oklch(0.78_0.22_22/0.05)] border border-[oklch(0.78_0.22_22/0.15)] text-[oklch(0.85_0.22_22)]"
+            ? "bg-gradient-to-br from-receive/20 to-receive/5 border-receive/15 text-receive"
+            : "bg-gradient-to-br from-pay/20 to-pay/5 border-pay/15 text-pay"
         )}>
           {initials(row.person.name)}
         </div>
@@ -598,7 +598,7 @@ function AttentionCard({ row, tone, fmt }: { row: PersonRow; tone: "receive" | "
         <div className="text-right mr-1">
           <div className={cn(
             "text-base font-extrabold tracking-tight tabular-nums",
-            isReceive ? "text-[oklch(0.85_0.18_155)]" : "text-[oklch(0.78_0.22_22)]"
+            isReceive ? "text-receive" : "text-pay"
           )}>
             {fmt(amount)}
           </div>

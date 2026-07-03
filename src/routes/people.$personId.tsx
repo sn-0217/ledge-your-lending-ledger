@@ -461,8 +461,8 @@ function TxRow({ tx }: { tx: Transaction }) {
         className={cn(
           "grid h-9 w-9 place-items-center rounded-2xl text-xs font-bold",
           positive
-            ? "bg-[oklch(0.78_0.17_155/0.18)] text-[oklch(0.85_0.18_155)]"
-            : "bg-[oklch(0.78_0.22_22/0.18)] text-[oklch(0.85_0.22_22)]",
+            ? "bg-receive/18 text-receive"
+            : "bg-pay/18 text-pay",
         )}
       >
         {meta.label[0]}
@@ -485,7 +485,7 @@ function TxRow({ tx }: { tx: Transaction }) {
         <div
           className={cn(
             "text-sm font-semibold tabular-nums",
-            positive ? "text-[oklch(0.85_0.18_155)]" : "text-[oklch(0.78_0.22_22)]",
+            positive ? "text-receive" : "text-pay",
           )}
         >
           {positive ? "+" : "−"}
