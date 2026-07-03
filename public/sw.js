@@ -37,8 +37,24 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
   // Do not try to cache chrome-extension or external scripts
-  const url = event.request.url;
-  if (!url.startsWith(self.location.origin)) return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Network-First for the root index page to prevent loading stale HTML with dead asset hashes
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

@@ -79,6 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Track money you lent, borrowed, and repaid. Offline-first, private, beautifully simple.",
       },
       { name: "theme-color", content: "#000000" },
+      { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { property: "og:title", content: "Ledge" },
