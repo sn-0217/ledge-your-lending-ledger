@@ -182,3 +182,21 @@
     display: none;
   }
 }
+
+@utility glow-primary {
+  box-shadow: 0 0 35px oklch(0.78 0.17 155 / 0.15);
+}
+
+@utility glow-accent {
+  box-shadow: 0 0 35px oklch(0.72 0.18 280 / 0.12);
+}
+
+@utility card-glowing-border {
+  border: 1px solid oklch(1 0 0 / 12%);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  
+  &:hover {
+    border-color: oklch(0.78 0.17 155 / 40%);
+    box-shadow: 0 0 25px oklch(0.78 0.17 155 / 0.08);
+  }
+}

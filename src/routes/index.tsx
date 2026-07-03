@@ -372,39 +372,43 @@ function Dashboard() {
           <div className="space-y-4 animate-in fade-in duration-150 ease-out">
             {/* Net balance hero */}
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out">
-              <GlassCard strong className="relative overflow-hidden p-5">
+              <GlassCard strong className="relative overflow-hidden p-6 border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 {/* Ambient glow */}
-                <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-primary/12 blur-3xl" />
-                <div className="pointer-events-none absolute -left-10 -bottom-10 h-36 w-36 rounded-full bg-accent/8 blur-2xl" />
+                <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/15 blur-[80px]" />
+                <div className="pointer-events-none absolute -left-12 -bottom-12 h-44 w-44 rounded-full bg-accent/10 blur-[60px]" />
 
-                <p className="relative text-[11px] uppercase tracking-widest text-muted-foreground">Net balance</p>
-                <p className={cn(
-                  "relative mt-1 text-4xl font-bold tabular-nums",
+                <p className="relative text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Net balance</p>
+                <h2 className={cn(
+                  "relative mt-1.5 text-5xl font-extrabold tracking-tight tabular-nums",
                   net > 0 ? "text-[oklch(0.85_0.18_155)]" : net < 0 ? "text-[oklch(0.78_0.22_22)]" : "text-muted-foreground"
                 )}>
                   {net === 0 ? "All clear" : (net > 0 ? "+" : "−") + fmt(Math.abs(net))}
-                </p>
-                <p className="relative mt-0.5 text-xs text-muted-foreground">
-                  {net > 0 ? "people owe you overall" : net < 0 ? "you owe overall" : "everything settled"}
+                </h2>
+                <p className="relative mt-1 text-xs text-muted-foreground/80 font-medium">
+                  {net > 0 ? "overall amount owed to you" : net < 0 ? "overall amount you owe" : "everything settled and clear"}
                 </p>
 
                 {/* To receive / To pay */}
-                <div className="relative mt-4 grid grid-cols-2 gap-2.5">
-                  <div className="glass rounded-2xl p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <ArrowDownLeft className="h-3 w-3 text-[oklch(0.85_0.18_155)]" />
+                <div className="relative mt-5 grid grid-cols-2 gap-3">
+                  <div className="glass rounded-[20px] p-3.5 card-glowing-border">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[oklch(0.85_0.18_155/0.12)] text-[oklch(0.85_0.18_155)]">
+                        <ArrowDownLeft className="h-3 w-3" />
+                      </span>
                       To receive
                     </div>
-                    <div className="mt-1 text-base font-semibold tabular-nums text-[oklch(0.85_0.18_155)]">
+                    <div className="mt-2.5 text-lg font-bold tabular-nums text-[oklch(0.85_0.18_155)]">
                       {fmt(totals?.toReceive ?? 0)}
                     </div>
                   </div>
-                  <div className="glass rounded-2xl p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <ArrowUpRight className="h-3 w-3 text-[oklch(0.78_0.22_22)]" />
+                  <div className="glass rounded-[20px] p-3.5 card-glowing-border">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[oklch(0.78_0.22_22/0.12)] text-[oklch(0.78_0.22_22)]">
+                        <ArrowUpRight className="h-3 w-3" />
+                      </span>
                       To pay
                     </div>
-                    <div className="mt-1 text-base font-semibold tabular-nums text-[oklch(0.78_0.22_22)]">
+                    <div className="mt-2.5 text-lg font-bold tabular-nums text-[oklch(0.78_0.22_22)]">
                       {fmt(totals?.toPay ?? 0)}
                     </div>
                   </div>
@@ -412,21 +416,21 @@ function Dashboard() {
 
                 {/* Recovery rate bar */}
                 {(totals?.lifetimeLent ?? 0) > 0 && (
-                  <div className="relative mt-4">
-                    <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" /> Recovery rate
+                  <div className="relative mt-5 pt-3 border-t border-white/5">
+                    <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <TrendingUp className="h-3.5 w-3.5 text-primary" /> Recovery rate
                       </span>
-                      <span className="tabular-nums font-medium text-foreground">{Math.round(recovery)}%</span>
+                      <span className="tabular-nums font-bold text-foreground text-xs">{Math.round(recovery)}%</span>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 border border-white/5">
                       <div
-                        className="h-full rounded-full bg-[oklch(0.78_0.17_155)] transition-[width] duration-700 ease-out"
+                        className="h-full rounded-full bg-gradient-to-r from-[oklch(0.78_0.17_155)] to-primary transition-[width] duration-1000 ease-out"
                         style={{ width: `${recovery}%` }}
                       />
                     </div>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      {fmt(totals?.lifetimeReceived ?? 0)} received back of {fmt(totals?.lifetimeLent ?? 0)} lent
+                    <p className="mt-2 text-[10px] text-muted-foreground leading-normal">
+                      Recovered <span className="font-semibold text-foreground">{fmt(totals?.lifetimeReceived ?? 0)}</span> back of <span className="font-semibold text-foreground">{fmt(totals?.lifetimeLent ?? 0)}</span> lifetime lent
                     </p>
                   </div>
                 )}
@@ -571,34 +575,34 @@ function AttentionCard({ row, tone, fmt }: { row: PersonRow; tone: "receive" | "
   return (
     <Link to="/people/$personId" params={{ personId: row.person.id }}>
       <GlassCard className={cn(
-        "flex items-center gap-4 p-4 transition-transform active:scale-[0.98]",
+        "flex items-center gap-4 p-4 transition-transform active:scale-[0.98] card-glowing-border rounded-2xl",
         isReceive ? "border-[oklch(0.78_0.17_155/0.2)]" : "border-[oklch(0.78_0.22_22/0.2)]"
       )}>
         {/* Avatar */}
         <div className={cn(
-          "grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-base font-bold",
+          "grid h-12 w-12 shrink-0 place-items-center rounded-xl text-base font-bold transition-all",
           isReceive
-            ? "bg-[oklch(0.78_0.17_155/0.15)] text-[oklch(0.85_0.18_155)]"
-            : "bg-[oklch(0.78_0.22_22/0.15)] text-[oklch(0.85_0.22_22)]"
+            ? "bg-gradient-to-br from-[oklch(0.78_0.17_155/0.2)] to-[oklch(0.78_0.17_155/0.05)] border border-[oklch(0.78_0.17_155/0.15)] text-[oklch(0.85_0.18_155)]"
+            : "bg-gradient-to-br from-[oklch(0.78_0.22_22/0.2)] to-[oklch(0.78_0.22_22/0.05)] border border-[oklch(0.78_0.22_22/0.15)] text-[oklch(0.85_0.22_22)]"
         )}>
           {initials(row.person.name)}
         </div>
         {/* Info */}
         <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold capitalize">{row.person.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {row.balance.activeCount} active · last {relativeDate(row.balance.lastActivity)}
+          <div className="truncate font-semibold capitalize text-sm">{row.person.name}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {row.balance.activeCount} active · {relativeDate(row.balance.lastActivity)}
           </div>
         </div>
         {/* Amount */}
-        <div className="text-right">
+        <div className="text-right mr-1">
           <div className={cn(
-            "text-lg font-bold tabular-nums",
+            "text-base font-extrabold tracking-tight tabular-nums",
             isReceive ? "text-[oklch(0.85_0.18_155)]" : "text-[oklch(0.78_0.22_22)]"
           )}>
             {fmt(amount)}
           </div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">
             {isReceive ? "owes you" : "you owe"}
           </div>
         </div>

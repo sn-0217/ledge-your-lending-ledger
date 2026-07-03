@@ -27,7 +27,7 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pb-[max(env(safe-area-inset-bottom),0.75rem)] px-3 pt-2 pointer-events-none"
       aria-label="Primary"
     >
-      <div className="glass-strong flex w-full max-w-md items-center justify-around rounded-full border px-2 py-2 pointer-events-auto shadow-2xl">
+      <div className="backdrop-blur-xl bg-card/80 flex w-full max-w-md items-center justify-around rounded-full border border-white/10 px-2.5 py-2 pointer-events-auto shadow-[0_20px_50px_rgba(0,0,0,0.65)]">
         {items.map((it) => {
           const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
           const Icon = it.icon;

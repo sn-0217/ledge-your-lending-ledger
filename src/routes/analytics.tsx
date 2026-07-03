@@ -38,12 +38,26 @@ const PURPLE = "oklch(0.72 0.18 280)";
 const AMBER = "oklch(0.82 0.16 75)";
 const BLUE = "oklch(0.75 0.15 220)";
 
-const CHART_COLORS = [GREEN, PURPLE, AMBER, RED, BLUE, "oklch(0.78 0.12 300)"];
-
 function monthKey(t: number) {
   const d = new Date(t);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+
+const CustomTooltip = ({ active, payload, label, fmt, name }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="glass rounded-xl p-2.5 border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.6)] leading-relaxed text-[11px] animate-in fade-in zoom-in-95 duration-100">
+        <p className="font-bold text-muted-foreground uppercase tracking-[0.15em] text-[9px] mb-1">{label}</p>
+        {payload.map((item: any, index: number) => (
+          <p key={index} className="text-xs font-extrabold tabular-nums" style={{ color: item.stroke || item.color || "var(--color-primary)" }}>
+            {name || item.name}: {fmt(item.value)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 function Analytics() {
   const rows = useAllPersonRows();
@@ -207,7 +221,7 @@ function Analytics() {
 
       {/* Lending trend – area chart */}
       {monthly.length > 0 && (
-        <GlassCard className="overflow-hidden p-4">
+        <GlassCard className="overflow-hidden p-4 card-glowing-border">
           <h2 className="mb-0.5 text-sm font-semibold">Lending trend</h2>
           <p className="mb-4 text-xs text-muted-foreground">Amount lent over last 6 months</p>
           <div className="h-44">
@@ -215,18 +229,15 @@ function Analytics() {
               <AreaChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="lentGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.75 0.15 220)" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="oklch(0.75 0.15 220)" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="oklch(0.75 0.15 220)" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="oklch(0.75 0.15 220)" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.05)" vertical={false} />
                 <XAxis dataKey="label" stroke="currentColor" fontSize={11} tickLine={false} axisLine={false} tick={{ fill: "oklch(0.65 0.02 260)" }} />
                 <Tooltip
-                  cursor={{ stroke: "oklch(0.75 0.15 220 / 0.4)", strokeWidth: 1 }}
-                  contentStyle={{ background: "oklch(0.1 0.01 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
-                  itemStyle={{ color: "rgba(255, 255, 255, 0.95)" }}
-                  labelStyle={{ color: "rgba(255, 255, 255, 0.6)" }}
-                  formatter={(v: number) => [fmt(v), "Lent"]}
+                  cursor={{ stroke: "oklch(0.75 0.15 220 / 0.25)", strokeWidth: 1 }}
+                  content={<CustomTooltip fmt={fmt} name="Lent" />}
                 />
                 <Area
                   type="monotone"
@@ -245,30 +256,34 @@ function Analytics() {
 
       {/* Repayments received – line chart */}
       {monthly.length > 0 && (
-        <GlassCard className="overflow-hidden p-4">
+        <GlassCard className="overflow-hidden p-4 card-glowing-border">
           <h2 className="mb-0.5 text-sm font-semibold">Borrowing trend</h2>
           <p className="mb-4 text-xs text-muted-foreground">Amount borrowed over last 6 months</p>
           <div className="h-44">
             <ResponsiveContainer>
-              <LineChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.06)" vertical={false} />
+              <AreaChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="borrowGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={GREEN} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={GREEN} stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.05)" vertical={false} />
                 <XAxis dataKey="label" stroke="currentColor" fontSize={11} tickLine={false} axisLine={false} tick={{ fill: "oklch(0.65 0.02 260)" }} />
                 <Tooltip
-                  cursor={{ stroke: `${GREEN}66`, strokeWidth: 1 }}
-                  contentStyle={{ background: "oklch(0.1 0.01 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
-                  itemStyle={{ color: "rgba(255, 255, 255, 0.95)" }}
-                  labelStyle={{ color: "rgba(255, 255, 255, 0.6)" }}
-                  formatter={(v: number) => [fmt(v), "Borrowed"]}
+                  cursor={{ stroke: `${GREEN}33`, strokeWidth: 1 }}
+                  content={<CustomTooltip fmt={fmt} name="Borrowed" />}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="borrowed"
                   stroke={GREEN}
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: GREEN, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: GREEN, strokeWidth: 0 }}
+                  strokeWidth={2}
+                  fill="url(#borrowGrad)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: GREEN, strokeWidth: 0 }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </GlassCard>
@@ -290,8 +305,15 @@ function Analytics() {
                   </Pie>
                   <Tooltip
                     formatter={(v: number) => fmt(v)}
-                    contentStyle={{ background: "oklch(0.12 0.012 260)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, fontSize: 12 }}
-                    itemStyle={{ color: "rgba(255, 255, 255, 0.95)" }}
+                    contentStyle={{
+                      background: "oklch(0.12 0.012 260 / 80%)",
+                      backdropFilter: "blur(8px)",
+                      border: "1px solid oklch(1 0 0 / 10%)",
+                      borderRadius: 12,
+                      fontSize: 11,
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.5)"
+                    }}
+                    itemStyle={{ color: "rgba(255, 255, 255, 0.95)", fontWeight: "bold" }}
                     labelStyle={{ color: "rgba(255, 255, 255, 0.6)" }}
                   />
                 </PieChart>
