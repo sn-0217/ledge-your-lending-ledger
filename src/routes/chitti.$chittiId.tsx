@@ -155,21 +155,21 @@ function ChittiDetail() {
   })();
 
   function monthLabel(month: number) {
-    const d = new Date(chitti.startDate);
+    const d = new Date(chitti!.startDate);
     d.setMonth(d.getMonth() + month - 1);
     return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   }
 
   function isCurrentMonth(month: number) {
     const today = new Date();
-    const d = new Date(chitti.startDate);
+    const d = new Date(chitti!.startDate);
     d.setMonth(d.getMonth() + month - 1);
     return today.getFullYear() === d.getFullYear() && today.getMonth() === d.getMonth();
   }
 
   function isPastMonth(month: number) {
     const today = new Date();
-    const d = new Date(chitti.startDate);
+    const d = new Date(chitti!.startDate);
     d.setMonth(d.getMonth() + month - 1);
     return d < today && !isCurrentMonth(month);
   }
@@ -228,8 +228,8 @@ function ChittiDetail() {
 
   async function handleAvailed(availed: boolean) {
     if (targetChitNum === null) return;
-    const updatedSlots = Array.from({ length: chitti.numChits }, (_, idx) => {
-      const existing = chitti.availedSlots?.find((s) => s.chitNumber === idx + 1);
+    const updatedSlots = Array.from({ length: chitti!.numChits }, (_, idx) => {
+      const existing = chitti!.availedSlots?.find((s) => s.chitNumber === idx + 1);
       if (idx + 1 === targetChitNum) {
         return {
           chitNumber: targetChitNum,

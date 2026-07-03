@@ -13,7 +13,7 @@ import {
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import type { Chitti } from "@/lib/types";
+import type { Chitti, Person } from "@/lib/types";
 import { ChittiForm } from "@/components/forms/ChittiForm";
 
 export const Route = createFileRoute("/chitti/")({
@@ -144,7 +144,7 @@ function ChittiCard({
   chitti, organizer, fmt, index,
 }: {
   chitti: Chitti;
-  organizer: ReturnType<typeof usePeople> extends (infer T)[] | undefined ? T : never;
+  organizer?: Person;
   fmt: (n: number) => string;
   index: number;
 }) {

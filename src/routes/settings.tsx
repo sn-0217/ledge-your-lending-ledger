@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSettings } from "@/stores/settings";
 import {
   exportToJSON,
   exportToCSV,

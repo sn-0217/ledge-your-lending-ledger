@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
-import { useLedge } from "@/features/dataProvider";
+import { useLedge, type PersonRow } from "@/features/dataProvider";
 import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
 import {
   AlertCircle,
