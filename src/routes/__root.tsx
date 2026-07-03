@@ -121,11 +121,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function ThemeApplier() {
   const theme = useSettings((s) => s.theme);
+  const accent = useSettings((s) => s.accentTheme);
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle("dark", theme === "dark");
     root.classList.toggle("light", theme === "light");
-  }, [theme]);
+
+    // Clear old theme accent classes
+    root.classList.remove("theme-mint", "theme-purple", "theme-blue", "theme-rose", "theme-amber");
+    // Apply selected theme class
+    root.classList.add(`theme-${accent || "mint"}`);
+  }, [theme, accent]);
   return null;
 }
 

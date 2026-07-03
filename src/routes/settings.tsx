@@ -15,6 +15,9 @@ import {
   FileSpreadsheet,
   CheckCircle,
   Smartphone,
+  Palette,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -70,6 +73,7 @@ async function clearAllData() {
 
 function Settings() {
   const queryClient = useQueryClient();
+  const { theme, setTheme, accentTheme, setAccentTheme } = useSettings();
   const { status, error, lastSync, autoSync } = useSyncStatus();
   const [busy, setBusy] = useState<"backup" | "restore" | "check" | null>(null);
   const [message, setMessage] = useState("");
@@ -199,6 +203,92 @@ function Settings() {
       <header className="pt-2">
         <h1 className="text-2xl font-bold">Settings</h1>
       </header>
+
+      {/* Appearance Customizer */}
+      <GlassCard className="p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Palette className="h-5 w-5 text-primary" />
+          <span className="text-sm font-semibold">Appearance</span>
+        </div>
+
+        {/* Theme Mode Selector (Dark / Light) */}
+        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+          <div className="space-y-0.5">
+            <div className="text-xs font-semibold">Theme Mode</div>
+            <p className="text-[10px] text-muted-foreground">Select dark or light style</p>
+          </div>
+          <div className="flex bg-white/5 rounded-full p-1 border border-white/5">
+            <button
+              onClick={() => setTheme("dark")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all",
+                theme === "dark" 
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Moon className="h-3.5 w-3.5" />
+              <span>Dark</span>
+            </button>
+            <button
+              onClick={() => setTheme("light")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all",
+                theme === "light" 
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Sun className="h-3.5 w-3.5" />
+              <span>Light</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Accent Color Theme Selector */}
+        <div className="space-y-2">
+          <div className="space-y-0.5">
+            <div className="text-xs font-semibold">Accent Color</div>
+            <p className="text-[10px] text-muted-foreground">Customize primary colors across the app</p>
+          </div>
+          
+          <div className="flex items-center gap-3 pt-1">
+            {[
+              { id: "mint", label: "Mint", color: "bg-[oklch(0.78_0.17_155)] border-[oklch(0.78_0.17_155/0.2)]" },
+              { id: "purple", label: "Lavender", color: "bg-[oklch(0.72_0.18_280)] border-[oklch(0.72_0.18_280/0.2)]" },
+              { id: "blue", label: "Ocean", color: "bg-[oklch(0.65_0.18_240)] border-[oklch(0.65_0.18_240/0.2)]" },
+              { id: "rose", label: "Rose", color: "bg-[oklch(0.68_0.22_340)] border-[oklch(0.68_0.22_340/0.2)]" },
+              { id: "amber", label: "Amber", color: "bg-[oklch(0.82_0.16_75)] border-[oklch(0.82_0.16_75/0.2)]" },
+            ].map((acc) => {
+              const isActive = accentTheme === acc.id;
+              return (
+                <button
+                  key={acc.id}
+                  onClick={() => setAccentTheme(acc.id as any)}
+                  className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none"
+                  aria-label={`Select ${acc.label} theme`}
+                >
+                  <div className={cn(
+                    "relative h-8 w-8 rounded-full border flex items-center justify-center transition-all scale-95 group-hover:scale-100",
+                    isActive ? "scale-100 ring-2 ring-primary ring-offset-2 ring-offset-background" : "",
+                    acc.color
+                  )}>
+                    {isActive && (
+                      <CheckCircle className="h-4 w-4 text-primary-foreground drop-shadow-sm font-bold" />
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-[9px] font-semibold transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {acc.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </GlassCard>
 
       {/* PWA Install Promo */}
       {!isStandalone && (

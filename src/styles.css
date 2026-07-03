@@ -121,6 +121,80 @@
   --glass-border: oklch(0.18 0.02 260 / 8%);
 }
 
+/* Accent Themes overrides */
+
+/* Purple/Lavender Theme */
+.theme-purple {
+  --primary: oklch(0.72 0.18 280);
+  --primary-foreground: oklch(0.12 0.02 280);
+  --accent: oklch(0.65 0.22 330);
+  --ring: oklch(0.72 0.18 280 / 60%);
+  --success: oklch(0.72 0.18 280);
+  --receive: oklch(0.72 0.18 280);
+}
+.light.theme-purple {
+  --primary: oklch(0.55 0.2 280);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --accent: oklch(0.5 0.22 330);
+  --ring: oklch(0.55 0.2 280 / 60%);
+  --success: oklch(0.55 0.2 280);
+  --receive: oklch(0.55 0.2 280);
+}
+
+/* Ocean Blue Theme */
+.theme-blue {
+  --primary: oklch(0.65 0.18 240);
+  --primary-foreground: oklch(0.12 0.02 240);
+  --accent: oklch(0.72 0.18 280);
+  --ring: oklch(0.65 0.18 240 / 60%);
+  --success: oklch(0.65 0.18 240);
+  --receive: oklch(0.65 0.18 240);
+}
+.light.theme-blue {
+  --primary: oklch(0.5 0.2 240);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --accent: oklch(0.55 0.2 280);
+  --ring: oklch(0.5 0.2 240 / 60%);
+  --success: oklch(0.5 0.2 240);
+  --receive: oklch(0.5 0.2 240);
+}
+
+/* Sunset Rose Theme */
+.theme-rose {
+  --primary: oklch(0.68 0.22 340);
+  --primary-foreground: oklch(0.12 0.02 340);
+  --accent: oklch(0.72 0.18 280);
+  --ring: oklch(0.68 0.22 340 / 60%);
+  --success: oklch(0.68 0.22 340);
+  --receive: oklch(0.68 0.22 340);
+}
+.light.theme-rose {
+  --primary: oklch(0.55 0.22 340);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --accent: oklch(0.55 0.2 280);
+  --ring: oklch(0.55 0.22 340 / 60%);
+  --success: oklch(0.55 0.22 340);
+  --receive: oklch(0.55 0.22 340);
+}
+
+/* Amber Gold Theme */
+.theme-amber {
+  --primary: oklch(0.82 0.16 75);
+  --primary-foreground: oklch(0.15 0.02 75);
+  --accent: oklch(0.78 0.17 155);
+  --ring: oklch(0.82 0.16 75 / 60%);
+  --success: oklch(0.82 0.16 75);
+  --receive: oklch(0.82 0.16 75);
+}
+.light.theme-amber {
+  --primary: oklch(0.62 0.16 75);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --accent: oklch(0.58 0.18 155);
+  --ring: oklch(0.62 0.16 75 / 60%);
+  --success: oklch(0.62 0.16 75);
+  --receive: oklch(0.62 0.16 75);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

@@ -32,13 +32,13 @@ export const Route = createFileRoute("/analytics")({
   ),
 });
 
-const GREEN = "oklch(0.78 0.17 155)";
-const RED = "oklch(0.72 0.2 22)";
+const GREEN = "var(--primary)";
+const RED = "var(--color-pay)";
 const PURPLE = "oklch(0.72 0.18 280)";
 const AMBER = "oklch(0.82 0.16 75)";
-const BLUE = "oklch(0.75 0.15 220)";
+const BLUE = "var(--color-accent)";
 
-const CHART_COLORS = [GREEN, PURPLE, AMBER, RED, BLUE, "oklch(0.78 0.12 300)"];
+const CHART_COLORS = ["var(--primary)", "var(--color-accent)", "oklch(0.82 0.16 75)", "var(--color-pay)", "oklch(0.75 0.15 220)", "oklch(0.78 0.12 300)"];
 
 function monthKey(t: number) {
   const d = new Date(t);
