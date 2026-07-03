@@ -151,12 +151,22 @@
   background: var(--color-glass);
   backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--color-glass-border);
+
+  @media (pointer: coarse) {
+    backdrop-filter: none;
+    background: color-mix(in oklab, var(--color-card) 65%, var(--color-background));
+  }
 }
 
 @utility glass-strong {
   background: color-mix(in oklab, var(--color-card) 80%, transparent);
   backdrop-filter: blur(32px) saturate(180%);
   border: 1px solid var(--color-glass-border);
+
+  @media (pointer: coarse) {
+    backdrop-filter: none;
+    background: var(--color-card);
+  }
 }
 
 @utility surface-gradient {
