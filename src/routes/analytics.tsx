@@ -38,6 +38,8 @@ const PURPLE = "oklch(0.72 0.18 280)";
 const AMBER = "oklch(0.82 0.16 75)";
 const BLUE = "oklch(0.75 0.15 220)";
 
+const CHART_COLORS = [GREEN, PURPLE, AMBER, RED, BLUE, "oklch(0.78 0.12 300)"];
+
 function monthKey(t: number) {
   const d = new Date(t);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
