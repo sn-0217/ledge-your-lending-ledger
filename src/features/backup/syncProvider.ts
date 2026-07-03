@@ -9,8 +9,8 @@ const EXPIRES_KEY = "ledge:google-token-expires";
 export interface SyncProvider {
   name: string;
   isConfigured(): boolean;
-  requestToken(options?: { forcePrompt?: boolean }): Promise<string>;
-  backup(data: any): Promise<{ id: string; modifiedTime?: string }>;
+  requestToken(options?: { forcePrompt?: boolean; silent?: boolean }): Promise<string>;
+  backup(data: any, options?: { silent?: boolean }): Promise<{ id: string; modifiedTime?: string }>;
   restore(): Promise<any>;
   getBackupInfo(): Promise<{ id: string; modifiedTime?: string } | null>;
   clearAuth(): void;
@@ -18,8 +18,8 @@ export interface SyncProvider {
 
 export function getCachedToken(): string | null {
   if (typeof window === "undefined") return null;
-  const token = sessionStorage.getItem(TOKEN_KEY);
-  const expiresAt = sessionStorage.getItem(EXPIRES_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  const expiresAt = localStorage.getItem(EXPIRES_KEY);
   if (!token || !expiresAt) return null;
   if (Date.now() > Number(expiresAt)) {
     clearCachedToken();
@@ -30,14 +30,14 @@ export function getCachedToken(): string | null {
 
 export function setCachedToken(token: string, expiresInSeconds: number = 3600) {
   if (typeof window === "undefined") return;
-  sessionStorage.setItem(TOKEN_KEY, token);
-  sessionStorage.setItem(EXPIRES_KEY, String(Date.now() + expiresInSeconds * 1000));
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(EXPIRES_KEY, String(Date.now() + expiresInSeconds * 1000));
 }
 
 export function clearCachedToken() {
   if (typeof window === "undefined") return;
-  sessionStorage.removeItem(TOKEN_KEY);
-  sessionStorage.removeItem(EXPIRES_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(EXPIRES_KEY);
 }
 
 type TokenResponse = {
@@ -173,10 +173,14 @@ export class GoogleDriveSyncProvider implements SyncProvider {
     return Boolean(getGoogleClientId());
   }
 
-  async requestToken(options?: { forcePrompt?: boolean }): Promise<string> {
+  async requestToken(options?: { forcePrompt?: boolean; silent?: boolean }): Promise<string> {
     const cached = getCachedToken();
     if (cached && !options?.forcePrompt) {
       return cached;
+    }
+
+    if (options?.silent) {
+      throw new Error("unauthorized: Session token expired. Re-authentication required.");
     }
 
     const clientId = getGoogleClientId();
@@ -208,8 +212,8 @@ export class GoogleDriveSyncProvider implements SyncProvider {
     });
   }
 
-  async backup(data: any): Promise<{ id: string; modifiedTime?: string }> {
-    const token = await this.requestToken();
+  async backup(data: any, options?: { silent?: boolean }): Promise<{ id: string; modifiedTime?: string }> {
+    const token = await this.requestToken({ silent: options?.silent });
     const existing = await findBackupFile(token);
     const payload = JSON.stringify(
       {
@@ -261,7 +265,7 @@ export class GoogleDriveSyncProvider implements SyncProvider {
 
   async getBackupInfo(): Promise<{ id: string; modifiedTime?: string } | null> {
     try {
-      const token = await this.requestToken();
+      const token = await this.requestToken({ silent: true });
       return await findBackupFile(token);
     } catch {
       return null;

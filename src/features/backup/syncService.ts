@@ -105,7 +105,7 @@ export async function triggerBackup(dbData: any, isAuto: boolean = false) {
 
   setSyncStatus("syncing");
   try {
-    const info = await activeProvider.backup(dbData);
+    const info = await activeProvider.backup(dbData, { silent: isAuto });
     const timeISO = info.modifiedTime ?? new Date().toISOString();
     setLastSyncTime(timeISO);
     setSyncStatus("synced");

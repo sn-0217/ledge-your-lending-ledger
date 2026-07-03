@@ -373,6 +373,26 @@ function Settings() {
               </div>
             </div>
 
+            {status === "unauthorized" && (
+              <div className="rounded-2xl border border-dashed border-destructive/25 bg-destructive/5 p-3.5 text-xs leading-normal flex flex-col gap-2 animate-in fade-in duration-300">
+                <div className="flex items-center gap-1.5 font-semibold text-[oklch(0.68_0.22_22)]">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-destructive animate-pulse" />
+                  <span>Sync Paused (Session Expired)</span>
+                </div>
+                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  For security, Google requires re-authenticating your session every hour. Reconnect to resume automatic backups.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 w-fit rounded-full text-[10px] px-3.5 border-destructive/25 text-destructive hover:bg-destructive/10 hover:text-white cursor-pointer mt-0.5"
+                  onClick={() => runCloudAction("backup")}
+                >
+                  Reconnect Now
+                </Button>
+              </div>
+            )}
+
             {message && (
               <div className="text-[10px] bg-white/5 border border-white/5 px-2.5 py-2 rounded-xl text-muted-foreground flex items-start gap-1.5 leading-relaxed">
                 <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
