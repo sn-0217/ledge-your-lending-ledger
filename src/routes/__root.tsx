@@ -35,7 +35,8 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  const message = error instanceof Error ? error.message : String(error);
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -45,7 +46,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="surface-gradient flex min-h-dvh items-center justify-center px-4">
       <div className="glass max-w-md rounded-3xl p-8 text-center">
         <h1 className="text-xl font-semibold">Something went wrong</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
         <div className="mt-6 flex justify-center gap-2">
           <button
             onClick={() => {

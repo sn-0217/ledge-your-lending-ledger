@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { queueCloudDelete, queueCloudUpsert } from "@/features/sync/cloudSync";
 import type {
   CategoryBalance,
   DebtCategory,
@@ -56,6 +57,15 @@ export async function createPerson(
       }
     }
   });
+  await queueCloudUpsert("people", person as unknown as Record<string, unknown>);
+  if (input.defaultCategories !== false) {
+    const categories = await db.categories.where("personId").equals(person.id).toArray();
+    await Promise.all(
+      categories.map((category) =>
+        queueCloudUpsert("categories", category as unknown as Record<string, unknown>),
+      ),
+    );
+  }
   return person;
 }
 
@@ -75,15 +85,27 @@ export async function updatePerson(id: ID, patch: Partial<Omit<Person, "id" | "c
   } else {
     await db.people.update(id, { ...patch, updatedAt: now() });
   }
+  const updated = await db.people.get(id);
+  if (updated) await queueCloudUpsert("people", updated as unknown as Record<string, unknown>);
 }
 
 export async function deletePerson(id: ID) {
   const db = getDb();
+  const [person, categories, transactions] = await Promise.all([
+    db.people.get(id),
+    db.categories.where("personId").equals(id).toArray(),
+    db.transactions.where("personId").equals(id).toArray(),
+  ]);
   await db.transaction("rw", db.people, db.categories, db.transactions, async () => {
     await db.transactions.where("personId").equals(id).delete();
     await db.categories.where("personId").equals(id).delete();
     await db.people.delete(id);
   });
+  await Promise.all([
+    ...(person ? [queueCloudDelete("people", person.id)] : []),
+    ...categories.map((row) => queueCloudDelete("categories", row.id)),
+    ...transactions.map((row) => queueCloudDelete("transactions", row.id)),
+  ]);
 }
 
 /* ---------------- Categories ---------------- */
@@ -99,19 +121,28 @@ export async function createCategory(personId: ID, name: string): Promise<DebtCa
     updatedAt: ts,
   };
   await db.categories.add(c);
+  await queueCloudUpsert("categories", c as unknown as Record<string, unknown>);
   return c;
 }
 
 export async function renameCategory(id: ID, name: string) {
-  await getDb().categories.update(id, { name: name.trim(), updatedAt: now() });
+  const db = getDb();
+  await db.categories.update(id, { name: name.trim(), updatedAt: now() });
+  const row = await db.categories.get(id);
+  if (row) await queueCloudUpsert("categories", row as unknown as Record<string, unknown>);
 }
 
 export async function deleteCategory(id: ID) {
   const db = getDb();
+  const transactions = await db.transactions.where("categoryId").equals(id).toArray();
   await db.transaction("rw", db.categories, db.transactions, async () => {
     await db.transactions.where("categoryId").equals(id).delete();
     await db.categories.delete(id);
   });
+  await Promise.all([
+    ...transactions.map((row) => queueCloudDelete("transactions", row.id)),
+    queueCloudDelete("categories", id),
+  ]);
 }
 
 /* ---------------- Transactions ---------------- */
@@ -122,6 +153,7 @@ export async function createTransaction(
   const ts = now();
   const tx: Transaction = { ...input, id: uid(), createdAt: ts, updatedAt: ts };
   await getDb().transactions.add(tx);
+  await queueCloudUpsert("transactions", tx as unknown as Record<string, unknown>);
   return tx;
 }
 
@@ -129,11 +161,15 @@ export async function updateTransaction(
   id: ID,
   patch: Partial<Omit<Transaction, "id" | "createdAt">>,
 ) {
-  await getDb().transactions.update(id, { ...patch, updatedAt: now() });
+  const db = getDb();
+  await db.transactions.update(id, { ...patch, updatedAt: now() });
+  const row = await db.transactions.get(id);
+  if (row) await queueCloudUpsert("transactions", row as unknown as Record<string, unknown>);
 }
 
 export async function deleteTransaction(id: ID) {
   await getDb().transactions.delete(id);
+  await queueCloudDelete("transactions", id);
 }
 
 /* ---------------- Derived: balances ---------------- */
@@ -198,10 +234,7 @@ export function computeCategoryBalance(
   };
 }
 
-export function computePersonBalance(
-  personId: ID,
-  balances: CategoryBalance[],
-): PersonBalance {
+export function computePersonBalance(personId: ID, balances: CategoryBalance[]): PersonBalance {
   let outstanding = 0;
   let active = 0;
   let lastActivity = 0;
