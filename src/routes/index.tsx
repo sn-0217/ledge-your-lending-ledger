@@ -227,9 +227,9 @@ function Dashboard() {
   const recovery = totals?.recoveryRate ?? 0;
 
   return (
-    <div className="space-y-5 pt-2 lg:space-y-8">
+    <div className="space-y-4 pt-2 sm:space-y-5 lg:space-y-6">
       {/* Search Header */}
-      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
@@ -247,7 +247,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="relative lg:w-full lg:max-w-md">
+        <div className="relative w-full sm:min-w-[220px] sm:flex-1 sm:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={searchInputRef}
@@ -369,9 +369,9 @@ function Dashboard() {
           </div>
         ) : (
           /* STANDARD DASHBOARD STATE */
-          <div className="grid gap-5 animate-in fade-in duration-150 ease-out lg:grid-cols-12 lg:items-start lg:gap-6">
+          <div className="grid min-w-0 gap-4 animate-in fade-in duration-150 ease-out sm:gap-5 lg:grid-cols-12 lg:items-start lg:gap-6">
             {/* Net balance hero */}
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out lg:col-span-8">
+            <div className="min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out lg:col-span-7">
               <GlassCard
                 strong
                 className="relative overflow-hidden border-glass-border p-6 shadow-[0_20px_50px_rgba(0,0,0,0.4)] lg:p-8"
@@ -458,7 +458,7 @@ function Dashboard() {
               </GlassCard>
             </div>
 
-            <div className="space-y-5 empty:hidden lg:col-span-4">
+            <div className="min-w-0 space-y-4 empty:hidden lg:col-span-5">
               {/* Overdue alert */}
               {overdueCount > 0 && (
                 <div className="animate-in fade-in zoom-in-95 duration-150 ease-out">
@@ -518,31 +518,11 @@ function Dashboard() {
                   </GlassCard>
                 </section>
               )}
-
-              {/* Attention: top debtor */}
-              {topDebtor && (
-                <section>
-                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Owes you the most
-                  </p>
-                  <AttentionCard row={topDebtor} tone="receive" fmt={fmt} />
-                </section>
-              )}
-
-              {/* Attention: top creditor */}
-              {topCreditor && (
-                <section>
-                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    You owe the most to
-                  </p>
-                  <AttentionCard row={topCreditor} tone="pay" fmt={fmt} />
-                </section>
-              )}
             </div>
 
             {/* Recent activity */}
             {recent.length > 0 && (
-              <section className="lg:col-span-8">
+              <section className="min-w-0 lg:col-span-7">
                 <div className="mb-2 flex items-center justify-between px-1">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Recent
@@ -594,6 +574,27 @@ function Dashboard() {
                 </GlassCard>
               </section>
             )}
+
+            {/* People to follow up with */}
+            <div className="min-w-0 space-y-4 empty:hidden lg:col-span-5">
+              {topDebtor && (
+                <section>
+                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Owes you the most
+                  </p>
+                  <AttentionCard row={topDebtor} tone="receive" fmt={fmt} />
+                </section>
+              )}
+
+              {topCreditor && (
+                <section>
+                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    You owe the most to
+                  </p>
+                  <AttentionCard row={topCreditor} tone="pay" fmt={fmt} />
+                </section>
+              )}
+            </div>
           </div>
         )}
       </div>
