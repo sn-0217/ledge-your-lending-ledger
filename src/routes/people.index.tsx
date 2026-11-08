@@ -2,9 +2,10 @@ import React, { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
+import { PersonAvatar } from "@/components/common/PersonAvatar";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { useLedge } from "@/features/dataProvider";
-import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
+import { useFormatMoney, relativeDate } from "@/lib/formatters";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,8 @@ import {
   Trash2,
   ChevronRight,
   MoreVertical,
+  ArrowDownLeft,
+  ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PersonRow } from "@/features/dataProvider";
@@ -64,9 +67,7 @@ const PersonRowItem = React.memo(
           className="flex-1 block min-w-0"
         >
           <GlassCard className="flex items-center gap-3 p-3 transition-transform active:scale-[0.98]">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 text-sm font-bold">
-              {initials(r.person.name)}
-            </div>
+            <PersonAvatar name={r.person.name} seed={r.person.id} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium">{r.person.name}</span>
@@ -85,15 +86,25 @@ const PersonRowItem = React.memo(
                 {relativeDate(r.balance.lastActivity)}
               </div>
             </div>
-            <div
-              className={cn(
-                "text-right text-sm font-semibold tabular-nums",
-                r.balance.outstanding > 0 && "text-receive",
-                r.balance.outstanding < 0 && "text-pay",
-                r.balance.outstanding === 0 && "text-muted-foreground",
+            <div className="min-w-[92px] text-right">
+              <div className="text-sm font-semibold tabular-nums text-foreground">
+                {r.balance.outstanding === 0 ? "Settled" : fmt(Math.abs(r.balance.outstanding))}
+              </div>
+              {r.balance.outstanding !== 0 && (
+                <div
+                  className={cn(
+                    "mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium",
+                    r.balance.outstanding > 0 ? "text-receive" : "text-pay",
+                  )}
+                >
+                  {r.balance.outstanding > 0 ? (
+                    <ArrowDownLeft className="h-3 w-3" />
+                  ) : (
+                    <ArrowUpRight className="h-3 w-3" />
+                  )}
+                  {r.balance.outstanding > 0 ? "Owes you" : "You owe"}
+                </div>
               )}
-            >
-              {r.balance.outstanding === 0 ? "Settled" : fmt(Math.abs(r.balance.outstanding))}
             </div>
           </GlassCard>
         </Link>

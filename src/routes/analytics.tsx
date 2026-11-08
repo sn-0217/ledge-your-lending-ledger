@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
+import { PersonAvatar } from "@/components/common/PersonAvatar";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { useAllPersonRows, useAllTransactions } from "@/lib/queries";
-import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
+import { useFormatMoney, relativeDate } from "@/lib/formatters";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -179,7 +180,7 @@ function Analytics() {
             <ArrowDownLeft className="h-3.5 w-3.5 text-receive" />
             To receive
           </div>
-          <div className="mt-1 text-xl font-bold tabular-nums text-receive">
+          <div className="mt-1 text-xl font-bold tabular-nums text-foreground">
             {fmt(totals?.toReceive ?? 0)}
           </div>
         </GlassCard>
@@ -189,7 +190,7 @@ function Analytics() {
             <ArrowUpRight className="h-3.5 w-3.5 text-pay" />
             To pay
           </div>
-          <div className="mt-1 text-xl font-bold tabular-nums text-pay">
+          <div className="mt-1 text-xl font-bold tabular-nums text-foreground">
             {fmt(totals?.toPay ?? 0)}
           </div>
         </GlassCard>
@@ -229,12 +230,7 @@ function Analytics() {
       <GlassCard strong className="relative overflow-hidden p-5 lg:col-span-4">
         <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Net position</div>
-        <div
-          className={cn(
-            "mt-1 text-4xl font-bold tabular-nums",
-            net > 0 ? "text-receive" : net < 0 ? "text-pay" : "text-muted-foreground",
-          )}
-        >
+        <div className={cn("mt-1 text-4xl font-bold tabular-nums", "text-foreground")}>
           {net === 0 ? "Settled" : (net > 0 ? "+" : "−") + fmt(Math.abs(net))}
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
@@ -398,9 +394,7 @@ function Analytics() {
             {topDebtors.map((r, i) => (
               <Link key={r.person.id} to="/people/$personId" params={{ personId: r.person.id }}>
                 <li className="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-foreground/5">
-                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/30 to-accent/30 text-xs font-bold">
-                    {initials(r.person.name)}
-                  </div>
+                  <PersonAvatar name={r.person.name} seed={r.person.id} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium capitalize">{r.person.name}</div>
                     <div className="text-xs text-muted-foreground">
@@ -408,7 +402,7 @@ function Analytics() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold tabular-nums text-receive">
+                    <div className="text-sm font-semibold tabular-nums text-foreground">
                       {fmt(r.balance.outstanding)}
                     </div>
                     <div className="text-[10px] text-muted-foreground">#{i + 1}</div>
@@ -428,9 +422,7 @@ function Analytics() {
             {topCreditors.map((r, i) => (
               <Link key={r.person.id} to="/people/$personId" params={{ personId: r.person.id }}>
                 <li className="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-foreground/5">
-                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-pay/20 to-pay/5 text-xs font-bold text-pay">
-                    {initials(r.person.name)}
-                  </div>
+                  <PersonAvatar name={r.person.name} seed={r.person.id} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium capitalize">{r.person.name}</div>
                     <div className="text-xs text-muted-foreground">
@@ -438,7 +430,7 @@ function Analytics() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold tabular-nums text-pay">
+                    <div className="text-sm font-semibold tabular-nums text-foreground">
                       {fmt(Math.abs(r.balance.outstanding))}
                     </div>
                     <div className="text-[10px] text-muted-foreground">#{i + 1}</div>
@@ -482,12 +474,7 @@ function Analytics() {
                       {labels[t.type]} · {relativeDate(t.date)}
                     </div>
                   </div>
-                  <div
-                    className={cn(
-                      "text-sm font-semibold tabular-nums",
-                      positive ? "text-receive" : "text-pay",
-                    )}
-                  >
+                  <div className={cn("text-sm font-semibold tabular-nums", "text-foreground")}>
                     {positive ? "+" : "−"}
                     {fmt(t.amount)}
                   </div>

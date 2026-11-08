@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
+import { PersonAvatar } from "@/components/common/PersonAvatar";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { WebModal } from "@/components/common/WebModal";
 import { useLedge } from "@/features/dataProvider";
 import { computeCategoryBalance } from "@/lib/repositories";
-import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
+import { useFormatMoney, relativeDate } from "@/lib/formatters";
 import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMemo, useState } from "react";
@@ -157,9 +158,7 @@ function PersonDetail() {
       <GlassCard strong className="relative overflow-hidden p-6">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
         <div className="flex items-center gap-4">
-          <div className="grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-primary/40 to-accent/40 text-xl font-bold">
-            {initials(person.name)}
-          </div>
+          <PersonAvatar name={person.name} seed={person.id} size="lg" />
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-bold">{person.name}</h1>
             <div className="mt-0.5 flex flex-wrap gap-1.5">
@@ -183,14 +182,7 @@ function PersonDetail() {
           <div className="text-xs uppercase tracking-widest text-muted-foreground">
             Net outstanding
           </div>
-          <div
-            className={cn(
-              "text-3xl font-bold tabular-nums",
-              totals > 0 && "text-receive",
-              totals < 0 && "text-pay",
-              totals === 0 && "text-muted-foreground",
-            )}
-          >
+          <div className={cn("text-3xl font-bold tabular-nums", "text-foreground")}>
             {totals === 0 ? "Settled" : fmt(Math.abs(totals))}
           </div>
           <div className="mt-0.5 text-xs text-muted-foreground">
@@ -335,14 +327,7 @@ function CategoryBlock({
             </button>
           </CollapsibleTrigger>
           <div className="text-right">
-            <div
-              className={cn(
-                "text-sm font-semibold tabular-nums",
-                balance > 0 && "text-receive",
-                balance < 0 && "text-pay",
-                balance === 0 && "text-muted-foreground",
-              )}
-            >
+            <div className={cn("text-sm font-semibold tabular-nums", "text-foreground")}>
               {balance === 0 ? "Settled" : fmt(Math.abs(balance))}
             </div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -480,12 +465,7 @@ function TxRow({ tx }: { tx: Transaction }) {
         )}
       </div>
       <div className="text-right">
-        <div
-          className={cn(
-            "text-sm font-semibold tabular-nums",
-            positive ? "text-receive" : "text-pay",
-          )}
-        >
+        <div className={cn("text-sm font-semibold tabular-nums", "text-foreground")}>
           {positive ? "+" : "−"}
           {fmt(tx.amount)}
         </div>

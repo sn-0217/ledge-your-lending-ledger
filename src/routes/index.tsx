@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
+import { PersonAvatar } from "@/components/common/PersonAvatar";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { useLedge, type PersonRow } from "@/features/dataProvider";
-import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
+import { useFormatMoney, relativeDate } from "@/lib/formatters";
 import {
   AlertCircle,
   ArrowDownLeft,
@@ -321,14 +322,7 @@ function Dashboard() {
                           {t.notes || `Type: ${t.type}`}
                         </div>
                       </div>
-                      <span
-                        className={cn(
-                          "font-semibold tabular-nums",
-                          t.type === "lent" || t.type === "repayment_out"
-                            ? "text-receive"
-                            : "text-pay",
-                        )}
-                      >
+                      <span className="font-semibold tabular-nums text-foreground">
                         {t.type === "lent" || t.type === "repayment_out" ? "+" : "−"}
                         {fmt(t.amount)}
                       </span>
@@ -392,7 +386,7 @@ function Dashboard() {
                 <h2
                   className={cn(
                     "relative mt-1.5 text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl",
-                    net > 0 ? "text-receive" : net < 0 ? "text-pay" : "text-muted-foreground",
+                    "text-foreground",
                   )}
                 >
                   {net === 0 ? "All clear" : (net > 0 ? "+" : "−") + fmt(Math.abs(net))}
@@ -414,7 +408,7 @@ function Dashboard() {
                       </span>
                       To receive
                     </div>
-                    <div className="mt-2.5 text-lg font-bold tabular-nums text-receive">
+                    <div className="mt-2.5 text-lg font-bold tabular-nums text-foreground">
                       {fmt(totals?.toReceive ?? 0)}
                     </div>
                   </div>
@@ -425,7 +419,7 @@ function Dashboard() {
                       </span>
                       To pay
                     </div>
-                    <div className="mt-2.5 text-lg font-bold tabular-nums text-pay">
+                    <div className="mt-2.5 text-lg font-bold tabular-nums text-foreground">
                       {fmt(totals?.toPay ?? 0)}
                     </div>
                   </div>
@@ -513,10 +507,7 @@ function Dashboard() {
                             </div>
                           </div>
                           <div
-                            className={cn(
-                              "text-sm font-semibold tabular-nums",
-                              isLent ? "text-receive" : "text-pay",
-                            )}
+                            className={cn("text-sm font-semibold tabular-nums", "text-foreground")}
                           >
                             {isLent ? "+" : "−"}
                             {fmt(t.amount)}
@@ -576,14 +567,13 @@ function Dashboard() {
                         params={{ personId: t.personId }}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-foreground/5 transition-colors"
                       >
-                        <div
-                          className={cn(
-                            "grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold",
-                            positive ? "bg-receive/18 text-receive" : "bg-pay/18 text-pay",
-                          )}
-                        >
-                          {t.person ? initials(t.person.name) : "?"}
-                        </div>
+                        {t.person ? (
+                          <PersonAvatar name={t.person.name} seed={t.person.id} size="sm" />
+                        ) : (
+                          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-[38%] bg-muted text-xs text-muted-foreground">
+                            ?
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium capitalize">
                             {t.person?.name ?? "—"}
@@ -593,10 +583,7 @@ function Dashboard() {
                           </div>
                         </div>
                         <div
-                          className={cn(
-                            "text-sm font-semibold tabular-nums",
-                            positive ? "text-receive" : "text-pay",
-                          )}
+                          className={cn("text-sm font-semibold tabular-nums", "text-foreground")}
                         >
                           {positive ? "+" : "−"}
                           {fmt(t.amount)}
@@ -634,16 +621,12 @@ function AttentionCard({
         )}
       >
         {/* Avatar */}
-        <div
-          className={cn(
-            "grid h-12 w-12 shrink-0 place-items-center rounded-xl text-base font-bold transition-all",
-            isReceive
-              ? "bg-gradient-to-br from-receive/20 to-receive/5 border-receive/15 text-receive"
-              : "bg-gradient-to-br from-pay/20 to-pay/5 border-pay/15 text-pay",
-          )}
-        >
-          {initials(row.person.name)}
-        </div>
+        <PersonAvatar
+          name={row.person.name}
+          seed={row.person.id}
+          size="md"
+          className="h-12 w-12 text-base"
+        />
         {/* Info */}
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold capitalize text-sm">{row.person.name}</div>
@@ -656,7 +639,7 @@ function AttentionCard({
           <div
             className={cn(
               "text-base font-extrabold tracking-tight tabular-nums",
-              isReceive ? "text-receive" : "text-pay",
+              "text-foreground",
             )}
           >
             {fmt(amount)}
