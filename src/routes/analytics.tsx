@@ -460,14 +460,7 @@ function Analytics() {
               };
               return (
                 <li key={t.id} className="flex items-center gap-3 py-2.5">
-                  <div
-                    className={cn(
-                      "grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold",
-                      positive ? "bg-receive/18 text-receive" : "bg-pay/18 text-pay",
-                    )}
-                  >
-                    {labels[t.type][0]}
-                  </div>
+                  <PersonAvatar name={t.personName} seed={t.personId} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium capitalize">{t.personName}</div>
                     <div className="text-xs text-muted-foreground">
