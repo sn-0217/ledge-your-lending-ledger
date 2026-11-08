@@ -1,16 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Cloud, LogIn, LogOut, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/common/GlassCard";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getCloudSyncState, subscribeCloudSync, flushCloudOutbox } from "@/features/sync/cloudSync";
 
 export function CloudAccountCard() {
   const configured = isSupabaseConfigured();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const sync = useSyncExternalStore(subscribeCloudSync, getCloudSyncState, getCloudSyncState);
 
   useEffect(() => {
     const client = getSupabaseClient();
@@ -86,6 +88,33 @@ export function CloudAccountCard() {
           <p className="text-xs text-muted-foreground">
             Signed in as <span className="font-medium text-foreground">{session.user.email}</span>
           </p>
+          <div className="rounded-lg border border-border/70 bg-secondary/30 p-3 text-xs">
+            <p className="font-medium">
+              {sync.status === "synced"
+                ? "Cloud sync active"
+                : sync.status === "connecting"
+                  ? "Syncing"
+                  : sync.status === "offline"
+                    ? "Offline"
+                    : "Sync needs attention"}
+            </p>
+            <p className="mt-1 text-muted-foreground">{sync.message}</p>
+            {sync.lastSyncedAt && (
+              <p className="mt-1 text-muted-foreground">
+                Last synced {new Date(sync.lastSyncedAt).toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+          {(sync.status === "error" || sync.status === "offline") && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => void flushCloudOutbox()}
+            >
+              Retry sync
+            </Button>
+          )}
           <Button variant="outline" size="sm" disabled={busy} onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" /> Sign out
           </Button>
@@ -93,11 +122,14 @@ export function CloudAccountCard() {
       ) : (
         <>
           <p className="text-xs text-muted-foreground">
-            Sign in once to connect your Ledge account. Cloud record sync is the next implementation phase;
-            existing records remain on this device for now.
+            Sign in once to connect your private Ledge account and sync records across devices.
           </p>
           <Button size="sm" disabled={busy} onClick={signIn}>
-            {busy ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+            {busy ? (
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <LogIn className="mr-2 h-4 w-4" />
+            )}
             Continue with Google
           </Button>
         </>

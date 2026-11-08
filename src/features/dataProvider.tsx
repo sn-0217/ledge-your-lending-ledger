@@ -1,10 +1,8 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDb } from "@/lib/db";
-import {
-  computeCategoryBalance,
-  computePersonBalance,
-} from "@/lib/repositories";
+import { queueCloudUpsert } from "@/features/sync/cloudSync";
+import { computeCategoryBalance, computePersonBalance } from "@/lib/repositories";
 import * as peopleRepo from "@/lib/repositories";
 import * as chittiRepo from "@/lib/chittiRepositories";
 import type {
@@ -41,13 +39,20 @@ interface DataContextType {
   isLoading: boolean;
 
   // People Mutations
-  createPerson: (input: Omit<Person, "id" | "createdAt" | "updatedAt"> & { defaultCategories?: boolean }) => Promise<Person>;
+  createPerson: (
+    input: Omit<Person, "id" | "createdAt" | "updatedAt"> & { defaultCategories?: boolean },
+  ) => Promise<Person>;
   updatePerson: (id: string, patch: Partial<Omit<Person, "id" | "createdAt">>) => Promise<void>;
   deletePerson: (id: string) => Promise<void>;
 
   // Transaction Mutations
-  createTransaction: (input: Omit<Transaction, "id" | "createdAt" | "updatedAt">) => Promise<Transaction>;
-  updateTransaction: (id: string, patch: Partial<Omit<Transaction, "id" | "createdAt">>) => Promise<void>;
+  createTransaction: (
+    input: Omit<Transaction, "id" | "createdAt" | "updatedAt">,
+  ) => Promise<Transaction>;
+  updateTransaction: (
+    id: string,
+    patch: Partial<Omit<Transaction, "id" | "createdAt">>,
+  ) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 
   // Category Mutations
@@ -56,14 +61,22 @@ interface DataContextType {
   deleteCategory: (id: string) => Promise<void>;
 
   // Chitti Mutations
-  createChitti: (data: Omit<Chitti, "id" | "status" | "createdAt" | "updatedAt">) => Promise<string>;
+  createChitti: (
+    data: Omit<Chitti, "id" | "status" | "createdAt" | "updatedAt">,
+  ) => Promise<string>;
   updateChittiStatus: (id: string, status: ChittiStatus) => Promise<void>;
   updateAvailedSlots: (id: string, slots: ChittiAvailedSlot[]) => Promise<void>;
   updateChitti: (id: string, patch: Partial<Omit<Chitti, "id" | "createdAt">>) => Promise<void>;
   deleteChitti: (id: string) => Promise<void>;
 
   // Chitti Payment Mutations
-  recordPayment: (chittiId: string, month: number, paidAmount: number, paidDate: number, notes?: string) => Promise<void>;
+  recordPayment: (
+    chittiId: string,
+    month: number,
+    paidAmount: number,
+    paidDate: number,
+    notes?: string,
+  ) => Promise<void>;
   deletePayment: (chittiId: string, month: number) => Promise<void>;
 
   // Undo delete status
@@ -144,7 +157,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         person,
         balance: computePersonBalance(
           person.id,
-          catRows.map((r) => r.balance)
+          catRows.map((r) => r.balance),
         ),
         categories: catRows,
       };
@@ -152,11 +165,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [people, categories, transactions]);
 
   const isLoading =
-    loadingPeople ||
-    loadingCategories ||
-    loadingTransactions ||
-    loadingChittis ||
-    loadingPayments;
+    loadingPeople || loadingCategories || loadingTransactions || loadingChittis || loadingPayments;
 
   // --- Mutators using useMutation ---
 
@@ -179,7 +188,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deletePersonMutation = useMutation({
     mutationFn: async (id: string) => {
       const db = getDb();
-      
+
       // Store all related items for undo before deleting
       const person = await db.people.get(id);
       if (person) {
@@ -217,7 +226,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const updateTransactionMutation = useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: any }) => peopleRepo.updateTransaction(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: any }) =>
+      peopleRepo.updateTransaction(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
@@ -245,7 +255,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // 3. Categories
   const createCategoryMutation = useMutation({
-    mutationFn: ({ personId, name }: { personId: string; name: string }) => peopleRepo.createCategory(personId, name),
+    mutationFn: ({ personId, name }: { personId: string; name: string }) =>
+      peopleRepo.createCategory(personId, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
@@ -275,14 +286,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const updateChittiStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: ChittiStatus }) => chittiRepo.updateChittiStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: ChittiStatus }) =>
+      chittiRepo.updateChittiStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
     },
   });
 
   const updateAvailedSlotsMutation = useMutation({
-    mutationFn: ({ id, slots }: { id: string; slots: ChittiAvailedSlot[] }) => chittiRepo.updateAvailedSlots(id, slots),
+    mutationFn: ({ id, slots }: { id: string; slots: ChittiAvailedSlot[] }) =>
+      chittiRepo.updateAvailedSlots(id, slots),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
     },
@@ -323,15 +336,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // 5. Chitti Payments
   const recordPaymentMutation = useMutation({
-    mutationFn: ({ chittiId, month, paidAmount, paidDate, notes }: { chittiId: string; month: number; paidAmount: number; paidDate: number; notes?: string }) =>
-      chittiRepo.recordPayment(chittiId, month, paidAmount, paidDate, notes),
+    mutationFn: ({
+      chittiId,
+      month,
+      paidAmount,
+      paidDate,
+      notes,
+    }: {
+      chittiId: string;
+      month: number;
+      paidAmount: number;
+      paidDate: number;
+      notes?: string;
+    }) => chittiRepo.recordPayment(chittiId, month, paidAmount, paidDate, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittiPayments"] });
     },
   });
 
   const deletePaymentMutation = useMutation({
-    mutationFn: ({ chittiId, month }: { chittiId: string; month: number }) => chittiRepo.deletePayment(chittiId, month),
+    mutationFn: ({ chittiId, month }: { chittiId: string; month: number }) =>
+      chittiRepo.deletePayment(chittiId, month),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittiPayments"] });
     },
@@ -341,28 +366,49 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   async function triggerUndo() {
     if (!lastDeleted) return;
     const db = getDb();
-    
+
     try {
       if (lastDeleted.type === "transaction") {
         await db.transactions.add(lastDeleted.data);
+        await queueCloudUpsert(
+          "transactions",
+          lastDeleted.data as unknown as Record<string, unknown>,
+        );
         toast.success("Restored transaction");
       } else if (lastDeleted.type === "person") {
         await db.people.add(lastDeleted.data);
+        await queueCloudUpsert("people", lastDeleted.data as unknown as Record<string, unknown>);
         if (lastDeleted.categories.length) {
           await db.categories.bulkAdd(lastDeleted.categories);
+          await Promise.all(
+            lastDeleted.categories.map((row) =>
+              queueCloudUpsert("categories", row as unknown as Record<string, unknown>),
+            ),
+          );
         }
         if (lastDeleted.transactions.length) {
           await db.transactions.bulkAdd(lastDeleted.transactions);
+          await Promise.all(
+            lastDeleted.transactions.map((row) =>
+              queueCloudUpsert("transactions", row as unknown as Record<string, unknown>),
+            ),
+          );
         }
         toast.success(`Restored "${lastDeleted.data.name}" and all records`);
       } else if (lastDeleted.type === "chitti") {
         await db.chittis.add(lastDeleted.data);
+        await queueCloudUpsert("chittis", lastDeleted.data as unknown as Record<string, unknown>);
         if (lastDeleted.payments.length) {
           await db.chittiPayments.bulkAdd(lastDeleted.payments);
+          await Promise.all(
+            lastDeleted.payments.map((row) =>
+              queueCloudUpsert("chittiPayments", row as unknown as Record<string, unknown>),
+            ),
+          );
         }
         toast.success(`Restored Chitti "${lastDeleted.data.name || "Chitti"}"`);
       }
-      
+
       // Invalidate all queries to show restored item
       queryClient.invalidateQueries();
       setLastDeleted(null);
@@ -371,49 +417,43 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const contextValue = useMemo<DataContextType>(() => ({
-    people,
-    categories,
-    transactions,
-    chittis,
-    chittiPayments,
-    personRows,
-    isLoading,
+  const contextValue = useMemo<DataContextType>(
+    () => ({
+      people,
+      categories,
+      transactions,
+      chittis,
+      chittiPayments,
+      personRows,
+      isLoading,
 
-    createPerson: (input) => createPersonMutation.mutateAsync(input),
-    updatePerson: (id, patch) => updatePersonMutation.mutateAsync({ id, patch }),
-    deletePerson: (id) => deletePersonMutation.mutateAsync(id),
+      createPerson: (input) => createPersonMutation.mutateAsync(input),
+      updatePerson: (id, patch) => updatePersonMutation.mutateAsync({ id, patch }),
+      deletePerson: (id) => deletePersonMutation.mutateAsync(id),
 
-    createTransaction: (input) => createTransactionMutation.mutateAsync(input),
-    updateTransaction: (id, patch) => updateTransactionMutation.mutateAsync({ id, patch }),
-    deleteTransaction: (id) => deleteTransactionMutation.mutateAsync(id),
+      createTransaction: (input) => createTransactionMutation.mutateAsync(input),
+      updateTransaction: (id, patch) => updateTransactionMutation.mutateAsync({ id, patch }),
+      deleteTransaction: (id) => deleteTransactionMutation.mutateAsync(id),
 
-    createCategory: (personId, name) => createCategoryMutation.mutateAsync({ personId, name }),
-    renameCategory: (id, name) => renameCategoryMutation.mutateAsync({ id, name }),
-    deleteCategory: (id) => deleteCategoryMutation.mutateAsync(id),
+      createCategory: (personId, name) => createCategoryMutation.mutateAsync({ personId, name }),
+      renameCategory: (id, name) => renameCategoryMutation.mutateAsync({ id, name }),
+      deleteCategory: (id) => deleteCategoryMutation.mutateAsync(id),
 
-    createChitti: (data) => createChittiMutation.mutateAsync(data),
-    updateChittiStatus: (id, status) => updateChittiStatusMutation.mutateAsync({ id, status }),
-    updateAvailedSlots: (id, slots) => updateAvailedSlotsMutation.mutateAsync({ id, slots }),
-    updateChitti: (id, patch) => updateChittiMutation.mutateAsync({ id, patch }),
-    deleteChitti: (id) => deleteChittiMutation.mutateAsync(id),
+      createChitti: (data) => createChittiMutation.mutateAsync(data),
+      updateChittiStatus: (id, status) => updateChittiStatusMutation.mutateAsync({ id, status }),
+      updateAvailedSlots: (id, slots) => updateAvailedSlotsMutation.mutateAsync({ id, slots }),
+      updateChitti: (id, patch) => updateChittiMutation.mutateAsync({ id, patch }),
+      deleteChitti: (id) => deleteChittiMutation.mutateAsync(id),
 
-    recordPayment: (chittiId, month, paidAmount, paidDate, notes) =>
-      recordPaymentMutation.mutateAsync({ chittiId, month, paidAmount, paidDate, notes }),
-    deletePayment: (chittiId, month) => deletePaymentMutation.mutateAsync({ chittiId, month }),
+      recordPayment: (chittiId, month, paidAmount, paidDate, notes) =>
+        recordPaymentMutation.mutateAsync({ chittiId, month, paidAmount, paidDate, notes }),
+      deletePayment: (chittiId, month) => deletePaymentMutation.mutateAsync({ chittiId, month }),
 
-    hasUndo: lastDeleted !== null,
-    triggerUndo,
-  }), [
-    people,
-    categories,
-    transactions,
-    chittis,
-    chittiPayments,
-    personRows,
-    isLoading,
-    lastDeleted,
-  ]);
+      hasUndo: lastDeleted !== null,
+      triggerUndo,
+    }),
+    [people, categories, transactions, chittis, chittiPayments, personRows, isLoading, lastDeleted],
+  );
 
   return <DataContext.Provider value={contextValue}>{children}</DataContext.Provider>;
 }

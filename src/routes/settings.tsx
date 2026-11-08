@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { CloudAccountCard } from "@/components/common/CloudAccountCard";
+import { queueCloudDelete } from "@/features/sync/cloudSync";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — Ledge" }] }),
@@ -53,6 +54,13 @@ export const Route = createFileRoute("/settings")({
 
 async function clearAllData() {
   const db = getDb();
+  const [people, categories, transactions, chittis, payments] = await Promise.all([
+    db.people.toArray(),
+    db.categories.toArray(),
+    db.transactions.toArray(),
+    db.chittis.toArray(),
+    db.chittiPayments.toArray(),
+  ]);
   await db.transaction(
     "rw",
     db.people,
@@ -68,6 +76,13 @@ async function clearAllData() {
       await db.chittis.clear();
     },
   );
+  await Promise.all([
+    ...people.map((row) => queueCloudDelete("people", row.id)),
+    ...categories.map((row) => queueCloudDelete("categories", row.id)),
+    ...transactions.map((row) => queueCloudDelete("transactions", row.id)),
+    ...chittis.map((row) => queueCloudDelete("chittis", row.id)),
+    ...payments.map((row) => queueCloudDelete("chittiPayments", row.id)),
+  ]);
 }
 
 function Settings() {
