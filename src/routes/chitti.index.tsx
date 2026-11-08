@@ -3,9 +3,10 @@ import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { WebModal } from "@/components/common/WebModal";
+import { PersonAvatar } from "@/components/common/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import { useLedge } from "@/features/dataProvider";
-import { useFormatMoney, initials } from "@/lib/formatters";
+import { useFormatMoney } from "@/lib/formatters";
 import {
   PiggyBank,
   Plus,
@@ -210,9 +211,13 @@ function ChittiCard({
         >
           <div className="flex items-start gap-3">
             {/* Organizer avatar */}
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-accent/20 text-sm font-bold text-accent">
-              {organizer ? initials(organizer.name) : <PiggyBank className="h-5 w-5" />}
-            </div>
+            {organizer ? (
+              <PersonAvatar name={organizer.name} seed={organizer.id} />
+            ) : (
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[38%] bg-accent/10 text-accent">
+                <PiggyBank className="h-5 w-5" />
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">

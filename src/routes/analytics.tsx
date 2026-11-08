@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
+import { PersonAvatar } from "@/components/common/PersonAvatar";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { useAllPersonRows, useAllTransactions } from "@/lib/queries";
-import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
+import { useFormatMoney, relativeDate } from "@/lib/formatters";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -165,299 +166,306 @@ function Analytics() {
   const net = (totals?.toReceive ?? 0) - (totals?.toPay ?? 0);
 
   return (
-    <div className="space-y-5 lg:grid lg:grid-cols-12 lg:items-start lg:gap-5 lg:space-y-0">
-      <header className="pt-2 lg:col-span-12">
-        <h1 className="text-2xl font-bold">Insights</h1>
-        <p className="text-sm text-muted-foreground">Your lending at a glance.</p>
+    <div className="space-y-5 pt-2 sm:space-y-6 lg:space-y-7">
+      <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Insights</h1>
+          <p className="text-sm text-muted-foreground">Your lending at a glance.</p>
+        </div>
       </header>
 
-      {/* Summary stat pills */}
-      <div className="grid grid-cols-2 gap-3 lg:col-span-8 lg:grid-cols-4">
-        <GlassCard strong className="relative overflow-hidden p-4">
+      {/* At-a-glance amounts */}
+      <section className="grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
+        <GlassCard strong className="relative min-w-0 overflow-hidden p-3 sm:p-4">
           <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-receive/15 blur-2xl" />
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ArrowDownLeft className="h-3.5 w-3.5 text-receive" />
             To receive
           </div>
-          <div className="mt-1 text-xl font-bold tabular-nums text-receive">
+          <div className="mt-2 whitespace-nowrap text-base font-bold tabular-nums text-foreground sm:text-lg xl:text-xl">
             {fmt(totals?.toReceive ?? 0)}
           </div>
         </GlassCard>
-        <GlassCard strong className="relative overflow-hidden p-4">
+        <GlassCard strong className="relative min-w-0 overflow-hidden p-3 sm:p-4">
           <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-pay/15 blur-2xl" />
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ArrowUpRight className="h-3.5 w-3.5 text-pay" />
             To pay
           </div>
-          <div className="mt-1 text-xl font-bold tabular-nums text-pay">
+          <div className="mt-2 whitespace-nowrap text-base font-bold tabular-nums text-foreground sm:text-lg xl:text-xl">
             {fmt(totals?.toPay ?? 0)}
           </div>
         </GlassCard>
-        <GlassCard className="p-4">
+        <GlassCard className="min-w-0 p-3 sm:p-4">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <TrendingUp className="h-3.5 w-3.5" /> Total lent
           </div>
-          <div className="mt-1 text-lg font-bold tabular-nums">{fmt(totals?.totalLent ?? 0)}</div>
+          <div className="mt-2 whitespace-nowrap text-base font-bold tabular-nums sm:text-lg xl:text-xl">
+            {fmt(totals?.totalLent ?? 0)}
+          </div>
         </GlassCard>
-        <GlassCard className="p-4">
+        <GlassCard className="min-w-0 p-3 sm:p-4">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <TrendingDown className="h-3.5 w-3.5" /> Total borrowed
           </div>
-          <div className="mt-1 text-lg font-bold tabular-nums">
+          <div className="mt-2 whitespace-nowrap text-base font-bold tabular-nums sm:text-lg xl:text-xl">
             {fmt(totals?.totalBorrowed ?? 0)}
           </div>
         </GlassCard>
-      </div>
+      </section>
 
-      {/* People stats */}
-      <div className="grid grid-cols-3 gap-2 lg:col-span-4">
-        {[
-          { label: "People", value: totals?.people ?? 0, icon: Users },
-          { label: "Active", value: totals?.active ?? 0, color: "text-primary" },
-          { label: "Settled", value: totals?.settled ?? 0, color: "text-success" },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <GlassCard key={label} className="p-3 text-center">
-            <div className={cn("text-2xl font-bold tabular-nums", color)}>{value}</div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-              {label}
-            </div>
-          </GlassCard>
-        ))}
-      </div>
+      {/* Net position and people summary */}
+      <section className="grid min-w-0 gap-3 md:grid-cols-12 md:gap-4">
+        <GlassCard strong className="relative min-w-0 overflow-hidden p-5 md:col-span-5 lg:p-6">
+          <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+          <div className="relative text-xs uppercase tracking-widest text-muted-foreground">
+            Net position
+          </div>
+          <div className="relative mt-1 truncate text-3xl font-bold tabular-nums text-foreground sm:text-4xl">
+            {net === 0 ? "Settled" : (net > 0 ? "+" : "−") + fmt(Math.abs(net))}
+          </div>
+          <div className="relative mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
+            {net > 0
+              ? "Overall, people owe you more than you owe."
+              : net < 0
+                ? "Overall, you owe more than people owe you."
+                : "Everything is perfectly balanced."}
+          </div>
+        </GlassCard>
 
-      {/* Net balance hero */}
-      <GlassCard strong className="relative overflow-hidden p-5 lg:col-span-4">
-        <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-        <div className="text-xs uppercase tracking-widest text-muted-foreground">Net position</div>
-        <div
-          className={cn(
-            "mt-1 text-4xl font-bold tabular-nums",
-            net > 0 ? "text-receive" : net < 0 ? "text-pay" : "text-muted-foreground",
-          )}
-        >
-          {net === 0 ? "Settled" : (net > 0 ? "+" : "−") + fmt(Math.abs(net))}
+        <div className="grid min-w-0 grid-cols-3 gap-2 md:col-span-7 md:gap-3">
+          {[
+            { label: "People", value: totals?.people ?? 0, icon: Users },
+            { label: "Active", value: totals?.active ?? 0, color: "text-primary" },
+            { label: "Settled", value: totals?.settled ?? 0, color: "text-success" },
+          ].map(({ label, value, icon: Icon, color }) => (
+            <GlassCard
+              key={label}
+              className="flex min-w-0 flex-col justify-center p-3 text-center sm:p-4"
+            >
+              <div className={cn("text-xl font-bold tabular-nums sm:text-3xl", color)}>{value}</div>
+              <div className="mt-1 truncate text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">
+                {label}
+              </div>
+            </GlassCard>
+          ))}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          {net > 0
-            ? "Overall, people owe you more than you owe."
-            : net < 0
-              ? "Overall, you owe more than people owe you."
-              : "Everything is perfectly balanced."}
-        </div>
-      </GlassCard>
+      </section>
 
       {/* Lending trend – area chart */}
       {monthly.length > 0 && (
-        <GlassCard className="overflow-hidden p-4 card-glowing-border lg:col-span-8">
-          <h2 className="mb-0.5 text-sm font-semibold">Lending trend</h2>
-          <p className="mb-4 text-xs text-muted-foreground">Amount lent over last 6 months</p>
-          <div className="h-44">
-            <ResponsiveContainer>
-              <AreaChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="lentGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-chart-2)" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="var(--color-chart-2)" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--color-border)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="label"
-                  stroke="currentColor"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: "var(--color-muted-foreground)" }}
-                />
-                <Tooltip
-                  cursor={{ stroke: "var(--color-chart-2)", strokeWidth: 1 }}
-                  content={<CustomTooltip fmt={fmt} name="Lent" />}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="lent"
-                  stroke="var(--color-chart-2)"
-                  strokeWidth={2}
-                  fill="url(#lentGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "var(--color-chart-2)", strokeWidth: 0 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </GlassCard>
-      )}
-
-      {/* Repayments received – line chart */}
-      {monthly.length > 0 && (
-        <GlassCard className="overflow-hidden p-4 card-glowing-border lg:col-span-6">
-          <h2 className="mb-0.5 text-sm font-semibold">Borrowing trend</h2>
-          <p className="mb-4 text-xs text-muted-foreground">Amount borrowed over last 6 months</p>
-          <div className="h-44">
-            <ResponsiveContainer>
-              <AreaChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="borrowGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.25} />
-                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--color-border)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="label"
-                  stroke="currentColor"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: "var(--color-muted-foreground)" }}
-                />
-                <Tooltip
-                  cursor={{ stroke: PRIMARY, strokeWidth: 1 }}
-                  content={<CustomTooltip fmt={fmt} name="Borrowed" />}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="borrowed"
-                  stroke={PRIMARY}
-                  strokeWidth={2}
-                  fill="url(#borrowGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: PRIMARY, strokeWidth: 0 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </GlassCard>
-      )}
-
-      {/* Outstanding distribution pie */}
-      {pieData.length > 0 && (
-        <GlassCard className="p-4 lg:col-span-6">
-          <h2 className="mb-1 text-sm font-semibold">Outstanding by person</h2>
-          <p className="mb-3 text-xs text-muted-foreground">Who holds the most balance</p>
-          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+        <section className="grid min-w-0 gap-3 lg:grid-cols-2 lg:gap-4">
+          <GlassCard className="min-w-0 overflow-hidden p-4 card-glowing-border sm:p-5">
+            <h2 className="mb-0.5 text-sm font-semibold">Lending trend</h2>
+            <p className="mb-4 text-xs text-muted-foreground">Amount lent over last 6 months</p>
             <div className="h-44">
               <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={44}
-                    outerRadius={70}
-                    paddingAngle={3}
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v: number) => fmt(v)}
-                    contentStyle={{
-                      background: "var(--color-popover)",
-                      backdropFilter: "blur(8px)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 12,
-                      fontSize: 11,
-                      boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
-                    }}
-                    itemStyle={{ color: "var(--color-popover-foreground)", fontWeight: "bold" }}
-                    labelStyle={{ color: "var(--color-muted-foreground)" }}
+                <AreaChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="lentGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-chart-2)" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="var(--color-chart-2)" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--color-border)"
+                    vertical={false}
                   />
-                </PieChart>
+                  <XAxis
+                    dataKey="label"
+                    stroke="currentColor"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "var(--color-muted-foreground)" }}
+                  />
+                  <Tooltip
+                    cursor={{ stroke: "var(--color-chart-2)", strokeWidth: 1 }}
+                    content={<CustomTooltip fmt={fmt} name="Lent" />}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="lent"
+                    stroke="var(--color-chart-2)"
+                    strokeWidth={2}
+                    fill="url(#lentGrad)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: "var(--color-chart-2)", strokeWidth: 0 }}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
-            <ul className="space-y-2 pr-1">
-              {pieData.map((d, i) => (
-                <li key={d.name} className="flex items-center gap-2 text-xs">
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: CHART_COLORS[i % CHART_COLORS.length] }}
+          </GlassCard>
+
+          <GlassCard className="min-w-0 overflow-hidden p-4 card-glowing-border sm:p-5">
+            <h2 className="mb-0.5 text-sm font-semibold">Borrowing trend</h2>
+            <p className="mb-4 text-xs text-muted-foreground">Amount borrowed over last 6 months</p>
+            <div className="h-44">
+              <ResponsiveContainer>
+                <AreaChart data={monthly} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="borrowGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.25} />
+                      <stop offset="100%" stopColor={PRIMARY} stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--color-border)"
+                    vertical={false}
                   />
-                  <span className="max-w-[72px] truncate capitalize">{d.name}</span>
-                </li>
+                  <XAxis
+                    dataKey="label"
+                    stroke="currentColor"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "var(--color-muted-foreground)" }}
+                  />
+                  <Tooltip
+                    cursor={{ stroke: PRIMARY, strokeWidth: 1 }}
+                    content={<CustomTooltip fmt={fmt} name="Borrowed" />}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="borrowed"
+                    stroke={PRIMARY}
+                    strokeWidth={2}
+                    fill="url(#borrowGrad)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: PRIMARY, strokeWidth: 0 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+        </section>
+      )}
+
+      <section
+        className={cn(
+          "grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-12 xl:gap-4",
+          !pieData.length && !topDebtors.length && !topCreditors.length && "hidden",
+        )}
+      >
+        {/* Outstanding distribution pie */}
+        {pieData.length > 0 && (
+          <GlassCard className="min-w-0 p-4 md:col-span-2 xl:col-span-4">
+            <h2 className="mb-1 text-sm font-semibold">Outstanding by person</h2>
+            <p className="mb-3 text-xs text-muted-foreground">Who holds the most balance</p>
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-4">
+              <div className="h-40 min-w-0 sm:h-44">
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={44}
+                      outerRadius={70}
+                      paddingAngle={3}
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v: number) => fmt(v)}
+                      contentStyle={{
+                        background: "var(--color-popover)",
+                        backdropFilter: "blur(8px)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: 12,
+                        fontSize: 11,
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                      }}
+                      itemStyle={{ color: "var(--color-popover-foreground)", fontWeight: "bold" }}
+                      labelStyle={{ color: "var(--color-muted-foreground)" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ul className="min-w-0 space-y-2 pr-1">
+                {pieData.map((d, i) => (
+                  <li key={d.name} className="flex items-center gap-2 text-xs">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: CHART_COLORS[i % CHART_COLORS.length] }}
+                    />
+                    <span className="max-w-[88px] truncate capitalize">{d.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Who owes you most */}
+        {topDebtors.length > 0 && (
+          <GlassCard className="min-w-0 p-4 xl:col-span-4">
+            <h2 className="mb-3 text-sm font-semibold">They owe you</h2>
+            <ul className="space-y-2">
+              {topDebtors.map((r, i) => (
+                <Link key={r.person.id} to="/people/$personId" params={{ personId: r.person.id }}>
+                  <li className="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-foreground/5">
+                    <PersonAvatar name={r.person.name} seed={r.person.id} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium capitalize">{r.person.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {relativeDate(r.balance.lastActivity)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-semibold tabular-nums text-foreground">
+                        {fmt(r.balance.outstanding)}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">#{i + 1}</div>
+                    </div>
+                  </li>
+                </Link>
               ))}
             </ul>
-          </div>
-        </GlassCard>
-      )}
+          </GlassCard>
+        )}
 
-      {/* Who owes you most */}
-      {topDebtors.length > 0 && (
-        <GlassCard className="p-4 lg:col-span-6">
-          <h2 className="mb-3 text-sm font-semibold">They owe you</h2>
-          <ul className="space-y-2">
-            {topDebtors.map((r, i) => (
-              <Link key={r.person.id} to="/people/$personId" params={{ personId: r.person.id }}>
-                <li className="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-foreground/5">
-                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/30 to-accent/30 text-xs font-bold">
-                    {initials(r.person.name)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium capitalize">{r.person.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {relativeDate(r.balance.lastActivity)}
+        {/* You owe */}
+        {topCreditors.length > 0 && (
+          <GlassCard className="min-w-0 p-4 xl:col-span-4">
+            <h2 className="mb-3 text-sm font-semibold">You owe them</h2>
+            <ul className="space-y-2">
+              {topCreditors.map((r, i) => (
+                <Link key={r.person.id} to="/people/$personId" params={{ personId: r.person.id }}>
+                  <li className="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-foreground/5">
+                    <PersonAvatar name={r.person.name} seed={r.person.id} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium capitalize">{r.person.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {relativeDate(r.balance.lastActivity)}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold tabular-nums text-receive">
-                      {fmt(r.balance.outstanding)}
+                    <div className="text-right">
+                      <div className="text-sm font-semibold tabular-nums text-foreground">
+                        {fmt(Math.abs(r.balance.outstanding))}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">#{i + 1}</div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground">#{i + 1}</div>
-                  </div>
-                </li>
-              </Link>
-            ))}
-          </ul>
-        </GlassCard>
-      )}
-
-      {/* You owe */}
-      {topCreditors.length > 0 && (
-        <GlassCard className="p-4 lg:col-span-6">
-          <h2 className="mb-3 text-sm font-semibold">You owe them</h2>
-          <ul className="space-y-2">
-            {topCreditors.map((r, i) => (
-              <Link key={r.person.id} to="/people/$personId" params={{ personId: r.person.id }}>
-                <li className="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-foreground/5">
-                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-pay/20 to-pay/5 text-xs font-bold text-pay">
-                    {initials(r.person.name)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium capitalize">{r.person.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {relativeDate(r.balance.lastActivity)}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold tabular-nums text-pay">
-                      {fmt(Math.abs(r.balance.outstanding))}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">#{i + 1}</div>
-                  </div>
-                </li>
-              </Link>
-            ))}
-          </ul>
-        </GlassCard>
-      )}
+                  </li>
+                </Link>
+              ))}
+            </ul>
+          </GlassCard>
+        )}
+      </section>
 
       {/* Recent activity */}
       {recentTxs.length > 0 && (
-        <GlassCard className="p-4 lg:col-span-6">
+        <GlassCard className="min-w-0 p-4 sm:p-5">
           <div className="mb-3 flex items-center gap-2">
             <Activity className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold">Recent activity</h2>
           </div>
-          <ul className="divide-y divide-border/50">
+          <ul className="grid min-w-0 gap-x-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
             {recentTxs.map((t) => {
               const positive = t.type === "lent" || t.type === "repayment_out";
               const labels: Record<string, string> = {
@@ -467,27 +475,18 @@ function Analytics() {
                 repayment_out: "Paid",
               };
               return (
-                <li key={t.id} className="flex items-center gap-3 py-2.5">
-                  <div
-                    className={cn(
-                      "grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold",
-                      positive ? "bg-receive/18 text-receive" : "bg-pay/18 text-pay",
-                    )}
-                  >
-                    {labels[t.type][0]}
-                  </div>
+                <li
+                  key={t.id}
+                  className="flex min-w-0 items-center gap-3 border-b border-border/50 py-2.5 last:border-b-0 sm:border-b-0"
+                >
+                  <PersonAvatar name={t.personName} seed={t.personId} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium capitalize">{t.personName}</div>
                     <div className="text-xs text-muted-foreground">
                       {labels[t.type]} · {relativeDate(t.date)}
                     </div>
                   </div>
-                  <div
-                    className={cn(
-                      "text-sm font-semibold tabular-nums",
-                      positive ? "text-receive" : "text-pay",
-                    )}
-                  >
+                  <div className="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-foreground">
                     {positive ? "+" : "−"}
                     {fmt(t.amount)}
                   </div>
