@@ -17,10 +17,34 @@ const ACTIONS: {
   tone: string;
   bg: string;
 }[] = [
-  { type: "lent", label: "Give money", icon: ArrowUpRight, tone: "text-receive", bg: "bg-receive/12" },
-  { type: "borrowed", label: "Borrow money", icon: ArrowDownLeft, tone: "text-pay", bg: "bg-pay/12" },
-  { type: "repayment_in", label: "Received repayment", icon: RotateCcw, tone: "text-receive", bg: "bg-receive/12" },
-  { type: "repayment_out", label: "Paid repayment", icon: RotateCcw, tone: "text-pay", bg: "bg-pay/12" },
+  {
+    type: "lent",
+    label: "Give money",
+    icon: ArrowUpRight,
+    tone: "text-receive",
+    bg: "bg-receive/12",
+  },
+  {
+    type: "borrowed",
+    label: "Borrow money",
+    icon: ArrowDownLeft,
+    tone: "text-pay",
+    bg: "bg-pay/12",
+  },
+  {
+    type: "repayment_in",
+    label: "Received repayment",
+    icon: RotateCcw,
+    tone: "text-receive",
+    bg: "bg-receive/12",
+  },
+  {
+    type: "repayment_out",
+    label: "Paid repayment",
+    icon: RotateCcw,
+    tone: "text-pay",
+    bg: "bg-pay/12",
+  },
 ];
 
 export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
@@ -43,7 +67,7 @@ export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
       ? "Quick add"
       : mode === "person"
         ? "Add person"
-        : ACTIONS.find((a) => a.type === mode)?.label ?? "Add";
+        : (ACTIONS.find((a) => a.type === mode)?.label ?? "Add");
 
   return (
     <>
@@ -53,10 +77,11 @@ export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
         whileHover={{ scale: 1.06 }}
         transition={{ type: "spring", stiffness: 400, damping: 22 }}
         onClick={() => setOpen(true)}
-        className="fixed bottom-[calc(5rem+max(env(safe-area-inset-bottom),0.75rem))] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_20px_50px_-15px_var(--primary)/70]"
+        className="fixed bottom-[calc(5rem+max(env(safe-area-inset-bottom),0.75rem))] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_20px_50px_-15px_var(--primary)/70] lg:right-8 lg:bottom-8 lg:h-12 lg:w-auto lg:gap-2 lg:px-5"
         aria-label="Quick add"
       >
         <Plus className="h-6 w-6" strokeWidth={2.5} />
+        <span className="hidden text-sm font-semibold lg:inline">New transaction</span>
       </motion.button>
 
       {/* Portal modal */}
@@ -98,9 +123,7 @@ export function QuickAddFab({ defaultPersonId }: { defaultPersonId?: string }) {
         )}
 
         {/* Person form */}
-        {mode === "person" && (
-          <PersonForm onSubmitted={close} />
-        )}
+        {mode === "person" && <PersonForm onSubmitted={close} />}
       </WebModal>
     </>
   );

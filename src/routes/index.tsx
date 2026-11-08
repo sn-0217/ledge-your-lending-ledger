@@ -25,10 +25,7 @@ import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [
-      { title: "Ledge — Home" },
-      { name: "description", content: "Your money at a glance." },
-    ],
+    meta: [{ title: "Ledge — Home" }, { name: "description", content: "Your money at a glance." }],
   }),
   component: () => (
     <AppShell>
@@ -96,7 +93,8 @@ function Dashboard() {
   }, []);
 
   const totals = useMemo(() => {
-    if (!rows.length) return { toReceive: 0, toPay: 0, lifetimeLent: 0, lifetimeReceived: 0, recoveryRate: 0 };
+    if (!rows.length)
+      return { toReceive: 0, toPay: 0, lifetimeLent: 0, lifetimeReceived: 0, recoveryRate: 0 };
     let toReceive = 0,
       toPay = 0,
       lifetimeLent = 0,
@@ -141,14 +139,14 @@ function Dashboard() {
     if (!rows.length || !txs.length) return 0;
     const now = Date.now();
     const settled = new Set(
-      rows.flatMap((r) => r.categories.filter((c) => c.balance.settled).map((c) => c.category.id))
+      rows.flatMap((r) => r.categories.filter((c) => c.balance.settled).map((c) => c.category.id)),
     );
     return txs.filter(
       (t) =>
         t.dueDate &&
         t.dueDate < now &&
         !settled.has(t.categoryId) &&
-        (t.type === "lent" || t.type === "borrowed")
+        (t.type === "lent" || t.type === "borrowed"),
     ).length;
   }, [rows, txs]);
 
@@ -157,7 +155,7 @@ function Dashboard() {
     if (!txs.length || !rows.length) return [];
     const now = Date.now();
     const settled = new Set(
-      rows.flatMap((r) => r.categories.filter((c) => c.balance.settled).map((c) => c.category.id))
+      rows.flatMap((r) => r.categories.filter((c) => c.balance.settled).map((c) => c.category.id)),
     );
     const personMap = new Map(rows.map((r) => [r.person.id, r.person]));
 
@@ -167,7 +165,7 @@ function Dashboard() {
           t.dueDate &&
           t.dueDate >= now &&
           !settled.has(t.categoryId) &&
-          (t.type === "lent" || t.type === "borrowed")
+          (t.type === "lent" || t.type === "borrowed"),
       )
       .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0))
       .slice(0, 3)
@@ -194,11 +192,7 @@ function Dashboard() {
       .map((r) => r.person);
 
     const txResult = txs
-      .filter(
-        (t) =>
-          (t.notes && t.notes.toLowerCase().includes(q)) ||
-          String(t.amount).includes(q)
-      )
+      .filter((t) => (t.notes && t.notes.toLowerCase().includes(q)) || String(t.amount).includes(q))
       .map((t) => {
         const p = rows.find((r) => r.person.id === t.personId)?.person;
         return { ...t, person: p };
@@ -208,7 +202,10 @@ function Dashboard() {
       .filter(
         (c) =>
           (c.name && c.name.toLowerCase().includes(q)) ||
-          rows.find((r) => r.person.id === c.organizerId)?.person.name.toLowerCase().includes(q)
+          rows
+            .find((r) => r.person.id === c.organizerId)
+            ?.person.name.toLowerCase()
+            .includes(q),
       )
       .map((c) => {
         const p = rows.find((r) => r.person.id === c.organizerId)?.person;
@@ -229,22 +226,27 @@ function Dashboard() {
   const recovery = totals?.recoveryRate ?? 0;
 
   return (
-    <div className="space-y-4 pt-2">
+    <div className="space-y-5 pt-2 lg:space-y-8">
       {/* Search Header */}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-muted-foreground">{todayLabel()}</p>
-            <h1 className="text-xl font-bold">{greeting()} 👋</h1>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">
+              {todayLabel()}
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight lg:text-3xl">{greeting()} 👋</h1>
           </div>
           {/* Quick Keyboard shortcuts hint */}
-          <div className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground bg-white/5 px-2 py-1 rounded-md">
+          <div className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground bg-secondary/60 px-2 py-1 rounded-md">
             <Keyboard className="h-3 w-3" />
-            <span>Shortcuts: <kbd className="font-semibold">/</kbd> search, <kbd className="font-semibold">N</kbd> add</span>
+            <span>
+              Shortcuts: <kbd className="font-semibold">/</kbd> search,{" "}
+              <kbd className="font-semibold">N</kbd> add
+            </span>
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative lg:w-full lg:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={searchInputRef}
@@ -269,17 +271,21 @@ function Dashboard() {
           /* SEARCH RESULTS STATE */
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-150 ease-out">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Search Results</h2>
-              <button onClick={() => setSearchQuery("")} className="text-xs text-primary">Clear search</button>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Search Results
+              </h2>
+              <button onClick={() => setSearchQuery("")} className="text-xs text-primary">
+                Clear search
+              </button>
             </div>
 
             {/* People Results */}
             {searchResults.people.length > 0 && (
               <GlassCard className="p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-1 border-b border-white/5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-1 border-b border-border/50">
                   <Users className="h-3.5 w-3.5" /> People
                 </div>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-border/50">
                   {searchResults.people.map((p) => (
                     <Link
                       key={p.id}
@@ -298,10 +304,10 @@ function Dashboard() {
             {/* Transaction Results */}
             {searchResults.transactions.length > 0 && (
               <GlassCard className="p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-1 border-b border-white/5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-1 border-b border-border/50">
                   <Layers className="h-3.5 w-3.5" /> Transactions
                 </div>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-border/50">
                   {searchResults.transactions.map((t) => (
                     <Link
                       key={t.id}
@@ -318,12 +324,12 @@ function Dashboard() {
                       <span
                         className={cn(
                           "font-semibold tabular-nums",
-                          (t.type === "lent" || t.type === "repayment_out")
-                            ? "text-[oklch(0.85_0.18_155)]"
-                            : "text-[oklch(0.85_0.22_22)]"
+                          t.type === "lent" || t.type === "repayment_out"
+                            ? "text-receive"
+                            : "text-pay",
                         )}
                       >
-                        {(t.type === "lent" || t.type === "repayment_out") ? "+" : "−"}
+                        {t.type === "lent" || t.type === "repayment_out" ? "+" : "−"}
                         {fmt(t.amount)}
                       </span>
                     </Link>
@@ -335,10 +341,10 @@ function Dashboard() {
             {/* Chitti Results */}
             {searchResults.chittis.length > 0 && (
               <GlassCard className="p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-1 border-b border-white/5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-1 border-b border-border/50">
                   <Coins className="h-3.5 w-3.5" /> Chittis
                 </div>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-border/50">
                   {searchResults.chittis.map((c) => (
                     <Link
                       key={c.id}
@@ -369,46 +375,57 @@ function Dashboard() {
           </div>
         ) : (
           /* STANDARD DASHBOARD STATE */
-          <div className="space-y-4 animate-in fade-in duration-150 ease-out">
+          <div className="grid gap-5 animate-in fade-in duration-150 ease-out lg:grid-cols-12 lg:items-start lg:gap-6">
             {/* Net balance hero */}
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out">
-              <GlassCard strong className="relative overflow-hidden p-6 border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out lg:col-span-8">
+              <GlassCard
+                strong
+                className="relative overflow-hidden border-glass-border p-6 shadow-[0_20px_50px_rgba(0,0,0,0.4)] lg:p-8"
+              >
                 {/* Ambient glow */}
                 <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/15 blur-[80px]" />
                 <div className="pointer-events-none absolute -left-12 -bottom-12 h-44 w-44 rounded-full bg-accent/10 blur-[60px]" />
 
-                <p className="relative text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Net balance</p>
-                <h2 className={cn(
-                  "relative mt-1.5 text-5xl font-extrabold tracking-tight tabular-nums",
-                  net > 0 ? "text-[oklch(0.85_0.18_155)]" : net < 0 ? "text-[oklch(0.78_0.22_22)]" : "text-muted-foreground"
-                )}>
+                <p className="relative text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Net balance
+                </p>
+                <h2
+                  className={cn(
+                    "relative mt-1.5 text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl",
+                    net > 0 ? "text-receive" : net < 0 ? "text-pay" : "text-muted-foreground",
+                  )}
+                >
                   {net === 0 ? "All clear" : (net > 0 ? "+" : "−") + fmt(Math.abs(net))}
                 </h2>
                 <p className="relative mt-1 text-xs text-muted-foreground/80 font-medium">
-                  {net > 0 ? "overall amount owed to you" : net < 0 ? "overall amount you owe" : "everything settled and clear"}
+                  {net > 0
+                    ? "overall amount owed to you"
+                    : net < 0
+                      ? "overall amount you owe"
+                      : "everything settled and clear"}
                 </p>
 
                 {/* To receive / To pay */}
                 <div className="relative mt-5 grid grid-cols-2 gap-3">
                   <div className="glass rounded-[20px] p-3.5 card-glowing-border">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[oklch(0.85_0.18_155/0.12)] text-[oklch(0.85_0.18_155)]">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-receive/12 text-receive">
                         <ArrowDownLeft className="h-3 w-3" />
                       </span>
                       To receive
                     </div>
-                    <div className="mt-2.5 text-lg font-bold tabular-nums text-[oklch(0.85_0.18_155)]">
+                    <div className="mt-2.5 text-lg font-bold tabular-nums text-receive">
                       {fmt(totals?.toReceive ?? 0)}
                     </div>
                   </div>
                   <div className="glass rounded-[20px] p-3.5 card-glowing-border">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[oklch(0.78_0.22_22/0.12)] text-[oklch(0.78_0.22_22)]">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-pay/12 text-pay">
                         <ArrowUpRight className="h-3 w-3" />
                       </span>
                       To pay
                     </div>
-                    <div className="mt-2.5 text-lg font-bold tabular-nums text-[oklch(0.78_0.22_22)]">
+                    <div className="mt-2.5 text-lg font-bold tabular-nums text-pay">
                       {fmt(totals?.toPay ?? 0)}
                     </div>
                   </div>
@@ -416,109 +433,132 @@ function Dashboard() {
 
                 {/* Recovery rate bar */}
                 {(totals?.lifetimeLent ?? 0) > 0 && (
-                  <div className="relative mt-5 pt-3 border-t border-white/5">
+                  <div className="relative mt-5 pt-3 border-t border-border/50">
                     <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <TrendingUp className="h-3.5 w-3.5 text-primary" /> Recovery rate
                       </span>
-                      <span className="tabular-nums font-bold text-foreground text-xs">{Math.round(recovery)}%</span>
+                      <span className="tabular-nums font-bold text-foreground text-xs">
+                        {Math.round(recovery)}%
+                      </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 border border-white/5">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted border border-border">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-receive to-primary transition-[width] duration-1000 ease-out"
                         style={{ width: `${recovery}%` }}
                       />
                     </div>
                     <p className="mt-2 text-[10px] text-muted-foreground leading-normal">
-                      Recovered <span className="font-semibold text-foreground">{fmt(totals?.lifetimeReceived ?? 0)}</span> back of <span className="font-semibold text-foreground">{fmt(totals?.lifetimeLent ?? 0)}</span> lifetime lent
+                      Recovered{" "}
+                      <span className="font-semibold text-foreground">
+                        {fmt(totals?.lifetimeReceived ?? 0)}
+                      </span>{" "}
+                      back of{" "}
+                      <span className="font-semibold text-foreground">
+                        {fmt(totals?.lifetimeLent ?? 0)}
+                      </span>{" "}
+                      lifetime lent
                     </p>
                   </div>
                 )}
               </GlassCard>
             </div>
 
+            <div className="space-y-5 empty:hidden lg:col-span-4">
+              {/* Overdue alert */}
+              {overdueCount > 0 && (
+                <div className="animate-in fade-in zoom-in-95 duration-150 ease-out">
+                  <Link to="/people">
+                    <GlassCard className="flex items-center gap-3 border border-warning/30 p-3.5">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
+                      <div className="flex-1 text-sm">
+                        <span className="font-semibold text-warning">{overdueCount} overdue</span>
+                        <span className="text-muted-foreground"> — tap to review</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </GlassCard>
+                  </Link>
+                </div>
+              )}
 
-            {/* Overdue alert */}
-            {overdueCount > 0 && (
-              <div className="animate-in fade-in zoom-in-95 duration-150 ease-out">
-                <Link to="/people">
-                  <GlassCard className="flex items-center gap-3 border border-orange-500/30 p-3.5">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-orange-400" />
-                    <div className="flex-1 text-sm">
-                      <span className="font-semibold text-orange-400">{overdueCount} overdue</span>
-                      <span className="text-muted-foreground"> — tap to review</span>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </GlassCard>
-                </Link>
-              </div>
-            )}
-
-
-            {/* Upcoming Payments */}
-            {upcomingPayments.length > 0 && (
-              <section>
-                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Upcoming Payments
-                </p>
-                <GlassCard className="divide-y divide-border/40 overflow-hidden p-0">
-                  {upcomingPayments.map((t) => {
-                    const isLent = t.type === "lent";
-                    return (
-                      <Link
-                        key={t.id}
-                        to="/people/$personId"
-                        params={{ personId: t.personId }}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors"
-                      >
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-xs font-semibold">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium capitalize">{t.person?.name ?? "—"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Due on {new Date(t.dueDate!).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              {/* Upcoming Payments */}
+              {upcomingPayments.length > 0 && (
+                <section>
+                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Upcoming Payments
+                  </p>
+                  <GlassCard className="divide-y divide-border/40 overflow-hidden p-0">
+                    {upcomingPayments.map((t) => {
+                      const isLent = t.type === "lent";
+                      return (
+                        <Link
+                          key={t.id}
+                          to="/people/$personId"
+                          params={{ personId: t.personId }}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-foreground/5 transition-colors"
+                        >
+                          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-secondary/60 text-xs font-semibold">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
                           </div>
-                        </div>
-                        <div className={cn(
-                          "text-sm font-semibold tabular-nums",
-                          isLent ? "text-[oklch(0.85_0.18_155)]" : "text-[oklch(0.78_0.22_22)]"
-                        )}>
-                          {isLent ? "+" : "−"}{fmt(t.amount)}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </GlassCard>
-              </section>
-            )}
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium capitalize">
+                              {t.person?.name ?? "—"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Due on{" "}
+                              {new Date(t.dueDate!).toLocaleDateString(undefined, {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </div>
+                          </div>
+                          <div
+                            className={cn(
+                              "text-sm font-semibold tabular-nums",
+                              isLent ? "text-receive" : "text-pay",
+                            )}
+                          >
+                            {isLent ? "+" : "−"}
+                            {fmt(t.amount)}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </GlassCard>
+                </section>
+              )}
 
-            {/* Attention: top debtor */}
-            {topDebtor && (
-              <section>
-                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Owes you the most
-                </p>
-                <AttentionCard row={topDebtor} tone="receive" fmt={fmt} />
-              </section>
-            )}
+              {/* Attention: top debtor */}
+              {topDebtor && (
+                <section>
+                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Owes you the most
+                  </p>
+                  <AttentionCard row={topDebtor} tone="receive" fmt={fmt} />
+                </section>
+              )}
 
-            {/* Attention: top creditor */}
-            {topCreditor && (
-              <section>
-                <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  You owe the most to
-                </p>
-                <AttentionCard row={topCreditor} tone="pay" fmt={fmt} />
-              </section>
-            )}
+              {/* Attention: top creditor */}
+              {topCreditor && (
+                <section>
+                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    You owe the most to
+                  </p>
+                  <AttentionCard row={topCreditor} tone="pay" fmt={fmt} />
+                </section>
+              )}
+            </div>
 
             {/* Recent activity */}
             {recent.length > 0 && (
-              <section>
+              <section className="lg:col-span-8">
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent</p>
-                  <Link to="/analytics" className="text-xs text-primary">See insights →</Link>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Recent
+                  </p>
+                  <Link to="/analytics" className="text-xs text-primary">
+                    See insights →
+                  </Link>
                 </div>
                 <GlassCard className="divide-y divide-border/40 overflow-hidden p-0">
                   {recent.map((t) => {
@@ -534,27 +574,32 @@ function Dashboard() {
                         key={t.id}
                         to="/people/$personId"
                         params={{ personId: t.personId }}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-foreground/5 transition-colors"
                       >
-                        <div className={cn(
-                          "grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold",
-                          positive
-                            ? "bg-receive/18 text-receive"
-                            : "bg-pay/18 text-pay",
-                        )}>
+                        <div
+                          className={cn(
+                            "grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold",
+                            positive ? "bg-receive/18 text-receive" : "bg-pay/18 text-pay",
+                          )}
+                        >
                           {t.person ? initials(t.person.name) : "?"}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium capitalize">{t.person?.name ?? "—"}</div>
+                          <div className="truncate text-sm font-medium capitalize">
+                            {t.person?.name ?? "—"}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {labels[t.type]} · {relativeDate(t.date)}
                           </div>
                         </div>
-                        <div className={cn(
-                          "text-sm font-semibold tabular-nums",
-                          positive ? "text-receive" : "text-pay"
-                        )}>
-                          {positive ? "+" : "−"}{fmt(t.amount)}
+                        <div
+                          className={cn(
+                            "text-sm font-semibold tabular-nums",
+                            positive ? "text-receive" : "text-pay",
+                          )}
+                        >
+                          {positive ? "+" : "−"}
+                          {fmt(t.amount)}
                         </div>
                       </Link>
                     );
@@ -569,22 +614,34 @@ function Dashboard() {
   );
 }
 
-function AttentionCard({ row, tone, fmt }: { row: PersonRow; tone: "receive" | "pay"; fmt: (n: number) => string }) {
+function AttentionCard({
+  row,
+  tone,
+  fmt,
+}: {
+  row: PersonRow;
+  tone: "receive" | "pay";
+  fmt: (n: number) => string;
+}) {
   const isReceive = tone === "receive";
   const amount = Math.abs(row.balance.outstanding);
   return (
     <Link to="/people/$personId" params={{ personId: row.person.id }}>
-      <GlassCard className={cn(
-        "flex items-center gap-4 p-4 transition-transform active:scale-[0.98] card-glowing-border rounded-2xl",
-        isReceive ? "border-receive/20" : "border-pay/20"
-      )}>
+      <GlassCard
+        className={cn(
+          "flex items-center gap-4 p-4 transition-transform active:scale-[0.98] card-glowing-border rounded-2xl",
+          isReceive ? "border-receive/20" : "border-pay/20",
+        )}
+      >
         {/* Avatar */}
-        <div className={cn(
-          "grid h-12 w-12 shrink-0 place-items-center rounded-xl text-base font-bold transition-all",
-          isReceive
-            ? "bg-gradient-to-br from-receive/20 to-receive/5 border-receive/15 text-receive"
-            : "bg-gradient-to-br from-pay/20 to-pay/5 border-pay/15 text-pay"
-        )}>
+        <div
+          className={cn(
+            "grid h-12 w-12 shrink-0 place-items-center rounded-xl text-base font-bold transition-all",
+            isReceive
+              ? "bg-gradient-to-br from-receive/20 to-receive/5 border-receive/15 text-receive"
+              : "bg-gradient-to-br from-pay/20 to-pay/5 border-pay/15 text-pay",
+          )}
+        >
           {initials(row.person.name)}
         </div>
         {/* Info */}
@@ -596,10 +653,12 @@ function AttentionCard({ row, tone, fmt }: { row: PersonRow; tone: "receive" | "
         </div>
         {/* Amount */}
         <div className="text-right mr-1">
-          <div className={cn(
-            "text-base font-extrabold tracking-tight tabular-nums",
-            isReceive ? "text-receive" : "text-pay"
-          )}>
+          <div
+            className={cn(
+              "text-base font-extrabold tracking-tight tabular-nums",
+              isReceive ? "text-receive" : "text-pay",
+            )}
+          >
             {fmt(amount)}
           </div>
           <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">
@@ -624,13 +683,16 @@ function EmptyState() {
       <GlassCard className="max-w-xs p-5 text-left">
         <h2 className="font-semibold">Track money between you and people.</h2>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Record what you lend or borrow, and Ledge keeps all balances tidy. Fully offline. Always private.
+          Record what you lend or borrow, and Ledge keeps all balances tidy. Fully offline. Always
+          private.
         </p>
         <p className="mt-4 text-xs text-muted-foreground">
-          Tap the <span className="font-bold text-primary">+</span> button to get started.
+          <span className="lg:hidden">
+            Tap the <span className="font-bold text-primary">+</span> button to get started.
+          </span>
+          <span className="hidden lg:inline">Select New transaction to get started.</span>
         </p>
       </GlassCard>
     </div>
   );
 }
-

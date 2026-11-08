@@ -5,13 +5,8 @@ import { ClientOnly } from "@/components/common/ClientOnly";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    /*
-     * Fixed viewport shell — fills exactly the screen, no body scroll.
-     * This eliminates scrollbar-gutter layout shift and keeps the bottom
-     * nav pinned. The inner div handles overflow-y scrolling instead.
-     */
     <div className="surface-gradient min-h-dvh w-full">
-      <div className="mx-auto w-full max-w-md px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-32 animate-in fade-in duration-150 ease-out">
+      <div className="mx-auto w-full max-w-md px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-32 animate-in fade-in duration-150 ease-out lg:max-w-6xl lg:px-8 lg:pb-16 lg:pt-28">
         {children}
       </div>
 

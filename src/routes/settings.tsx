@@ -9,9 +9,6 @@ import {
   Upload,
   Trash2,
   Info,
-  Cloud,
-  RefreshCw,
-  AlertCircle,
   FileSpreadsheet,
   CheckCircle,
   Smartphone,
@@ -21,21 +18,13 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSettings } from "@/stores/settings";
+import { useSettings, type AccentTheme } from "@/stores/settings";
 import {
   exportToJSON,
   exportToCSV,
   exportToExcel,
   importBackupPayload,
-  getDatabaseBackupPayload,
 } from "@/features/backup/backupService";
-import {
-  useSyncStatus,
-  triggerBackup,
-  triggerRestore,
-  setAutoSyncEnabled,
-  getActiveProvider,
-} from "@/features/backup/syncService";
 import { getDb } from "@/lib/db";
 import {
   AlertDialog,
@@ -49,6 +38,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { CloudAccountCard } from "@/components/common/CloudAccountCard";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — Ledge" }] }),
@@ -63,28 +53,29 @@ export const Route = createFileRoute("/settings")({
 
 async function clearAllData() {
   const db = getDb();
-  await db.transaction("rw", db.people, db.categories, db.transactions, db.chittis, db.chittiPayments, async () => {
-    await db.transactions.clear();
-    await db.categories.clear();
-    await db.people.clear();
-    await db.chittiPayments.clear();
-    await db.chittis.clear();
-  });
+  await db.transaction(
+    "rw",
+    db.people,
+    db.categories,
+    db.transactions,
+    db.chittis,
+    db.chittiPayments,
+    async () => {
+      await db.transactions.clear();
+      await db.categories.clear();
+      await db.people.clear();
+      await db.chittiPayments.clear();
+      await db.chittis.clear();
+    },
+  );
 }
 
 function Settings() {
   const queryClient = useQueryClient();
   const { theme, setTheme, accentTheme, setAccentTheme } = useSettings();
-  const { status, error, lastSync, autoSync } = useSyncStatus();
-  const [busy, setBusy] = useState<"backup" | "restore" | "check" | null>(null);
-  const [message, setMessage] = useState("");
-  const [lastBackupTime, setLastBackupTime] = useState<string>("");
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-
-  const provider = getActiveProvider();
-  const isCloudConfigured = provider.isConfigured();
 
   // Detect standalone mode
   useEffect(() => {
@@ -117,93 +108,13 @@ function Settings() {
     setInstallPrompt(null);
   };
 
-  const handleToggleAutoSync = async () => {
-    if (autoSync) {
-      setAutoSyncEnabled(false);
-      setMessage("Auto-sync disabled.");
-    } else {
-      setBusy("backup");
-      setMessage("Authorizing Google Drive...");
-      try {
-        await provider.requestToken({ forcePrompt: true });
-        setAutoSyncEnabled(true);
-        
-        // Initial auto backup
-        const dbData = await getDatabaseBackupPayload();
-        await triggerBackup(dbData);
-        
-        // Fetch fresh backup info
-        const info = await provider.getBackupInfo();
-        if (info?.modifiedTime) {
-          setLastBackupTime(info.modifiedTime);
-        }
-        setMessage("Auto-sync activated successfully.");
-        toast.success("Auto-sync enabled");
-      } catch (err) {
-        console.error("Failed to enable auto-sync:", err);
-        setAutoSyncEnabled(false);
-        setMessage(err instanceof Error ? err.message : "Authorization failed.");
-        toast.error("Auto-sync authorization failed");
-      } finally {
-        setBusy(null);
-      }
-    }
-  };
-
-  const runCloudAction = async (action: "backup" | "restore" | "check") => {
-    setBusy(action);
-    setMessage(
-      action === "backup"
-        ? "Opening Google sign-in..."
-        : action === "restore"
-          ? "Opening Google sign-in..."
-          : "Checking Google Drive..."
-    );
-
-    try {
-      if (action === "backup") {
-        const dbData = await getDatabaseBackupPayload();
-        await triggerBackup(dbData);
-        // fetch info
-        const info = await provider.getBackupInfo();
-        if (info?.modifiedTime) setLastBackupTime(info.modifiedTime);
-        setMessage(`Backup complete. Synced to Google Drive.`);
-        toast.success("Cloud backup successful");
-      } else if (action === "restore") {
-        if (!confirm("Restore backup from Google Drive? This will overwrite your local database.")) {
-          return;
-        }
-        const cloudData = await triggerRestore();
-        await importBackupPayload(cloudData);
-        // Invalidate queries to reload all routes
-        queryClient.invalidateQueries();
-        setMessage("Restore complete. Database updated successfully.");
-        toast.success("Database restored successfully");
-      } else {
-        const info = await provider.getBackupInfo();
-        if (info?.modifiedTime) {
-          setLastBackupTime(info.modifiedTime);
-          setMessage(`Backup verified · ${new Date(info.modifiedTime).toLocaleString()}`);
-          toast.success("Backup verified");
-        } else {
-          setLastBackupTime("");
-          setMessage("No Google Drive backup file found yet.");
-          toast.warning("No backup found on Drive");
-        }
-      }
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Sync action failed.");
-      toast.error(err instanceof Error ? err.message : "Sync operation failed");
-    } finally {
-      setBusy(null);
-    }
-  };
-
   return (
     <div className="space-y-5">
       <header className="pt-2">
         <h1 className="text-2xl font-bold">Settings</h1>
       </header>
+
+      <CloudAccountCard />
 
       {/* Appearance Customizer */}
       <GlassCard className="p-4 space-y-4">
@@ -213,19 +124,19 @@ function Settings() {
         </div>
 
         {/* Theme Mode Selector (Dark / Light) */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+        <div className="flex items-center justify-between border-b border-border/50 pb-3">
           <div className="space-y-0.5">
             <div className="text-xs font-semibold">Theme Mode</div>
             <p className="text-[10px] text-muted-foreground">Select dark or light style</p>
           </div>
-          <div className="flex bg-white/5 rounded-full p-1 border border-white/5">
+          <div className="flex bg-secondary/60 rounded-full p-1 border border-border">
             <button
               onClick={() => setTheme("dark")}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all",
-                theme === "dark" 
+                theme === "dark"
                   ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Moon className="h-3.5 w-3.5" />
@@ -235,9 +146,9 @@ function Settings() {
               onClick={() => setTheme("light")}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all",
-                theme === "light" 
+                theme === "light"
                   ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Sun className="h-3.5 w-3.5" />
@@ -250,38 +161,66 @@ function Settings() {
         <div className="space-y-2">
           <div className="space-y-0.5">
             <div className="text-xs font-semibold">Accent Color</div>
-            <p className="text-[10px] text-muted-foreground">Customize primary colors across the app</p>
+            <p className="text-[10px] text-muted-foreground">
+              Customize primary colors across the app
+            </p>
           </div>
-          
+
           <div className="flex items-center gap-3 pt-1">
             {[
-              { id: "mint", label: "Mint", color: "bg-[oklch(0.78_0.17_155)] border-[oklch(0.78_0.17_155/0.2)]" },
-              { id: "purple", label: "Lavender", color: "bg-[oklch(0.72_0.18_280)] border-[oklch(0.72_0.18_280/0.2)]" },
-              { id: "blue", label: "Ocean", color: "bg-[oklch(0.65_0.18_240)] border-[oklch(0.65_0.18_240/0.2)]" },
-              { id: "rose", label: "Rose", color: "bg-[oklch(0.68_0.22_340)] border-[oklch(0.68_0.22_340/0.2)]" },
-              { id: "amber", label: "Amber", color: "bg-[oklch(0.82_0.16_75)] border-[oklch(0.82_0.16_75/0.2)]" },
+              {
+                id: "mint",
+                label: "Mint",
+                color: "bg-[oklch(0.78_0.17_155)] border-[oklch(0.78_0.17_155/0.2)]",
+              },
+              {
+                id: "purple",
+                label: "Lavender",
+                color: "bg-[oklch(0.72_0.18_280)] border-[oklch(0.72_0.18_280/0.2)]",
+              },
+              {
+                id: "blue",
+                label: "Ocean",
+                color: "bg-[oklch(0.65_0.18_240)] border-[oklch(0.65_0.18_240/0.2)]",
+              },
+              {
+                id: "rose",
+                label: "Rose",
+                color: "bg-[oklch(0.68_0.22_340)] border-[oklch(0.68_0.22_340/0.2)]",
+              },
+              {
+                id: "amber",
+                label: "Amber",
+                color: "bg-[oklch(0.82_0.16_75)] border-[oklch(0.82_0.16_75/0.2)]",
+              },
             ].map((acc) => {
               const isActive = accentTheme === acc.id;
               return (
                 <button
                   key={acc.id}
-                  onClick={() => setAccentTheme(acc.id as any)}
+                  onClick={() => setAccentTheme(acc.id as AccentTheme)}
                   className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none"
                   aria-label={`Select ${acc.label} theme`}
                 >
-                  <div className={cn(
-                    "relative h-8 w-8 rounded-full border flex items-center justify-center transition-all scale-95 group-hover:scale-100",
-                    isActive ? "scale-100 ring-2 ring-primary ring-offset-2 ring-offset-background" : "",
-                    acc.color
-                  )}>
+                  <div
+                    className={cn(
+                      "relative h-8 w-8 rounded-full border flex items-center justify-center transition-all scale-95 group-hover:scale-100",
+                      isActive
+                        ? "scale-100 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                        : "",
+                      acc.color,
+                    )}
+                  >
                     {isActive && (
                       <CheckCircle className="h-4 w-4 text-primary-foreground drop-shadow-sm font-bold" />
                     )}
                   </div>
-                  <span className={cn(
-                    "text-[9px] font-semibold transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-[9px] font-semibold transition-colors",
+                      isActive ? "text-primary" : "text-muted-foreground",
+                    )}
+                  >
                     {acc.label}
                   </span>
                 </button>
@@ -309,13 +248,20 @@ function Settings() {
                     <p className="font-semibold text-primary/80">Follow these steps to install:</p>
                     <ul className="list-disc pl-3.5 space-y-1">
                       <li>
-                        <strong>Brave &amp; Chrome:</strong> Tap the browser's menu button (three vertical dots <span className="font-semibold">⋮</span>) and select <span className="font-semibold text-foreground">"Install app"</span> or <span className="font-semibold text-foreground">"Add to Home screen"</span>.
+                        <strong>Brave &amp; Chrome:</strong> Tap the browser's menu button (three
+                        vertical dots <span className="font-semibold">⋮</span>) and select{" "}
+                        <span className="font-semibold text-foreground">"Install app"</span> or{" "}
+                        <span className="font-semibold text-foreground">"Add to Home screen"</span>.
                       </li>
                       <li>
-                        <strong>Safari (iOS):</strong> Tap the share icon (<span className="font-semibold">⎙</span>) and select <span className="font-semibold text-foreground">"Add to Home Screen"</span>.
+                        <strong>Safari (iOS):</strong> Tap the share icon (
+                        <span className="font-semibold">⎙</span>) and select{" "}
+                        <span className="font-semibold text-foreground">"Add to Home Screen"</span>.
                       </li>
                       <li>
-                        <strong>Firefox &amp; Others:</strong> Tap the options menu and select <span className="font-semibold text-foreground">"Install"</span> or <span className="font-semibold text-foreground">"Add to Home screen"</span>.
+                        <strong>Firefox &amp; Others:</strong> Tap the options menu and select{" "}
+                        <span className="font-semibold text-foreground">"Install"</span> or{" "}
+                        <span className="font-semibold text-foreground">"Add to Home screen"</span>.
                       </li>
                     </ul>
                   </div>
@@ -323,14 +269,18 @@ function Settings() {
               </div>
             </div>
             {installPrompt ? (
-              <Button size="sm" onClick={handleInstallApp} className="rounded-full px-3 text-xs shrink-0 ml-4 mt-0.5">
+              <Button
+                size="sm"
+                onClick={handleInstallApp}
+                className="rounded-full px-3 text-xs shrink-0 ml-4 mt-0.5"
+              >
                 Install
               </Button>
             ) : (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => setShowInstructions(!showInstructions)} 
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowInstructions(!showInstructions)}
                 className="rounded-full px-3 text-xs shrink-0 ml-4 mt-0.5 border-primary/20 hover:bg-primary/10"
               >
                 {showInstructions ? "Hide" : "How to Install"}
@@ -339,180 +289,6 @@ function Settings() {
           </div>
         </GlassCard>
       )}
-
-      {/* Cloud Sync Section */}
-      <GlassCard className="space-y-3.5 p-4">
-        <div className="flex items-center justify-between pb-0.5">
-          <div className="flex items-center gap-2">
-            <Cloud className="h-5 w-5 text-primary" />
-            <span className="text-sm font-semibold">Google Drive Sync</span>
-          </div>
-          <span
-            className={cn(
-              "text-[10px] px-2 py-0.5 rounded-full font-semibold border",
-              isCloudConfigured
-                ? "bg-[oklch(0.85_0.18_155/0.1)] text-[oklch(0.85_0.18_155)] border-[oklch(0.85_0.18_155/0.15)]"
-                : "bg-orange-500/10 text-orange-400 border-orange-500/15"
-            )}
-          >
-            {isCloudConfigured ? "Configured" : "Unconfigured"}
-          </span>
-        </div>
-
-        {!isCloudConfigured ? (
-          <div className="rounded-2xl border border-dashed border-orange-500/30 bg-orange-500/5 p-3 text-xs text-orange-400 leading-relaxed">
-            <div className="font-semibold flex items-center gap-1 mb-0.5">
-              <AlertCircle className="h-3.5 w-3.5" /> Client ID Missing
-            </div>
-            To enable Google Drive Sync, add <span className="font-mono">VITE_GOOGLE_CLIENT_ID</span> to your `.env` configuration file first.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {/* Auto Sync Toggle */}
-            <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-              <div className="space-y-0.5">
-                <div className="text-xs font-semibold">Auto-sync changes</div>
-                <p className="text-[10px] text-muted-foreground">Automatically backup after data updates</p>
-              </div>
-              <button
-                disabled={busy !== null}
-                onClick={handleToggleAutoSync}
-                className={cn(
-                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none",
-                  autoSync ? "bg-primary" : "bg-white/10"
-                )}
-              >
-                <span
-                  className={cn(
-                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                    autoSync ? "translate-x-5" : "translate-x-0"
-                  )}
-                />
-              </button>
-            </div>
-
-            {/* Sync Actions Rows */}
-            <div className="space-y-3 text-xs">
-              {/* Manual Backup */}
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <div className="font-semibold">Cloud Backup</div>
-                  <p className="text-[10px] text-muted-foreground">
-                    {lastBackupTime || lastSync
-                      ? `Last synced: ${new Date(lastBackupTime || lastSync).toLocaleString()}`
-                      : "No backups found"}
-                  </p>
-                </div>
-                <Button
-                  disabled={busy !== null}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => runCloudAction("backup")}
-                  className="h-8 rounded-full gap-1.5 px-3"
-                >
-                  {busy === "backup" ? (
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Upload className="h-3 w-3" />
-                  )}
-                  {busy === "backup" ? "Syncing..." : "Backup now"}
-                </Button>
-              </div>
-
-              {/* Manual Restore */}
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <div className="font-semibold">Cloud Restore</div>
-                  <p className="text-[10px] text-muted-foreground">Download latest cloud backup to local db</p>
-                </div>
-                <Button
-                  disabled={busy !== null}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => runCloudAction("restore")}
-                  className="h-8 rounded-full gap-1.5 px-3"
-                >
-                  {busy === "restore" ? (
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Download className="h-3 w-3" />
-                  )}
-                  {busy === "restore" ? "Restoring..." : "Restore"}
-                </Button>
-              </div>
-
-              {/* Verify backup */}
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <div className="font-semibold">Verify backup</div>
-                  <p className="text-[10px] text-muted-foreground">Confirm current status in Google Drive</p>
-                </div>
-                <Button
-                  disabled={busy !== null}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => runCloudAction("check")}
-                  className="h-8 rounded-full gap-1.5 px-3 text-muted-foreground"
-                >
-                  {busy === "check" ? (
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3 w-3" />
-                  )}
-                  Check
-                </Button>
-              </div>
-            </div>
-
-            {status === "unauthorized" && (
-              <div className="rounded-2xl border border-dashed border-destructive/25 bg-destructive/5 p-3.5 text-xs leading-normal flex flex-col gap-2 animate-in fade-in duration-300">
-                <div className="flex items-center gap-1.5 font-semibold text-[oklch(0.68_0.22_22)]">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-destructive animate-pulse" />
-                  <span>Sync Paused (Session Expired)</span>
-                </div>
-                <p className="text-muted-foreground text-[11px] leading-relaxed">
-                  For security, Google requires re-authenticating your session every hour. Reconnect to resume automatic backups.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 w-fit rounded-full text-[10px] px-3.5 border-destructive/25 text-destructive hover:bg-destructive/10 hover:text-white cursor-pointer mt-0.5"
-                  onClick={() => runCloudAction("backup")}
-                >
-                  Reconnect Now
-                </Button>
-              </div>
-            )}
-
-            {message && (
-              <div className="text-[10px] bg-white/5 border border-white/5 px-2.5 py-2 rounded-xl text-muted-foreground flex items-start gap-1.5 leading-relaxed">
-                <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                <span>{message}</span>
-              </div>
-            )}
-            
-            {status !== "idle" && (
-              <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
-                <span className="relative flex h-2 w-2">
-                  <span className={cn(
-                    "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-                    status === "syncing" && "bg-primary",
-                    status === "synced" && "bg-green-500",
-                    (status === "error" || status === "unauthorized") && "bg-destructive"
-                  )} />
-                  <span className={cn(
-                    "relative inline-flex rounded-full h-2 w-2",
-                    status === "syncing" && "bg-primary",
-                    status === "synced" && "bg-green-500",
-                    (status === "error" || status === "unauthorized") && "bg-destructive"
-                  )} />
-                </span>
-                <span className="capitalize">Status: {status === "unauthorized" ? "unauthorized session" : status}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </GlassCard>
 
       {/* Local Backup & Restore */}
       <GlassCard className="space-y-3 p-4">
@@ -559,7 +335,7 @@ function Settings() {
                 toast.error((e as Error).message);
               }
             }}
-            className="rounded-full text-xs py-1 px-2 h-9 text-[oklch(0.85_0.18_155)] border-[oklch(0.85_0.18_155/0.2)] hover:bg-[oklch(0.85_0.18_155/0.05)]"
+            className="rounded-full text-xs py-1 px-2 h-9 text-primary border-primary/20 hover:bg-primary/5"
           >
             <FileSpreadsheet className="h-3.5 w-3.5 mr-1 shrink-0" /> Excel
           </Button>
@@ -602,7 +378,7 @@ function Settings() {
               <Trash2 className="h-4 w-4" /> Clear all data
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="glass-strong border-white/10 text-foreground">
+          <AlertDialogContent className="glass-strong border-glass-border text-foreground">
             <AlertDialogHeader>
               <AlertDialogTitle>Clear all data?</AlertDialogTitle>
               <AlertDialogDescription className="text-muted-foreground">
@@ -611,7 +387,9 @@ function Settings() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-full border-white/10 text-foreground hover:bg-white/5">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="rounded-full border-border text-foreground hover:bg-secondary">
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full"
                 onClick={async () => {
@@ -639,7 +417,7 @@ function Settings() {
         <div className="space-y-0.5 text-xs text-muted-foreground">
           <div className="font-semibold text-foreground">Ledge</div>
           <div>Personal money &amp; debt manager</div>
-          <div className="pt-1">Offline-first · Cloud backup integration · Private</div>
+          <div className="pt-1">Offline-first · Private</div>
         </div>
       </GlassCard>
     </div>

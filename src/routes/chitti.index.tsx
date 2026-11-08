@@ -7,8 +7,15 @@ import { Button } from "@/components/ui/button";
 import { useLedge } from "@/features/dataProvider";
 import { useFormatMoney, initials } from "@/lib/formatters";
 import {
-  PiggyBank, Plus, ChevronRight, Calendar, Coins,
-  CheckCircle2, Clock, XCircle, Trophy,
+  PiggyBank,
+  Plus,
+  ChevronRight,
+  Calendar,
+  Coins,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Trophy,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -29,8 +36,13 @@ export const Route = createFileRoute("/chitti/")({
 
 const STATUS_META = {
   active: { label: "Active", icon: Clock, color: "text-primary", bg: "bg-primary/15" },
-  completed: { label: "Completed", icon: CheckCircle2, color: "text-[oklch(0.78_0.17_155)]", bg: "bg-[oklch(0.78_0.17_155/0.15)]" },
-  cancelled: { label: "Cancelled", icon: XCircle, color: "text-muted-foreground", bg: "bg-muted/40" },
+  completed: { label: "Completed", icon: CheckCircle2, color: "text-success", bg: "bg-success/15" },
+  cancelled: {
+    label: "Cancelled",
+    icon: XCircle,
+    color: "text-muted-foreground",
+    bg: "bg-muted/40",
+  },
 };
 
 function ChittiList() {
@@ -74,24 +86,35 @@ function ChittiList() {
         <div className="space-y-2">
           <GlassCard strong className="relative overflow-hidden p-4">
             <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">Monthly commitment</div>
-            <div className="mt-1 text-3xl font-bold text-accent">{fmt(dashboard.totalMonthlyDue)}</div>
-            <div className="text-xs text-muted-foreground">across {dashboard.totalChits} chit{dashboard.totalChits !== 1 ? "s" : ""} in {dashboard.active} chitti{dashboard.active !== 1 ? "s" : ""}</div>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground">
+              Monthly commitment
+            </div>
+            <div className="mt-1 text-3xl font-bold text-accent">
+              {fmt(dashboard.totalMonthlyDue)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              across {dashboard.totalChits} chit{dashboard.totalChits !== 1 ? "s" : ""} in{" "}
+              {dashboard.active} chitti{dashboard.active !== 1 ? "s" : ""}
+            </div>
           </GlassCard>
           <div className="grid grid-cols-2 gap-2">
             <GlassCard className="p-3 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-[oklch(0.85_0.18_155)]">
+              <div className="flex items-center justify-center gap-1.5 text-primary">
                 <Trophy className="h-4 w-4" />
                 <span className="text-xl font-bold">{dashboard.availed}</span>
               </div>
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Already availed</div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Already availed
+              </div>
             </GlassCard>
             <GlassCard className="p-3 text-center">
               <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span className="text-xl font-bold">{dashboard.notAvailed}</span>
               </div>
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Yet to avail</div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Yet to avail
+              </div>
             </GlassCard>
           </div>
         </div>
@@ -105,7 +128,8 @@ function ChittiList() {
           </div>
           <h2 className="font-semibold">No chittis yet</h2>
           <p className="max-w-xs text-sm text-muted-foreground">
-            Track your chitfund participations — who organizes them, how much you pay monthly, and whether you've availed.
+            Track your chitfund participations — who organizes them, how much you pay monthly, and
+            whether you've availed.
           </p>
           <Button onClick={() => setCreating(true)} className="gap-2 rounded-full">
             <Plus className="h-4 w-4" /> Add chitti
@@ -116,9 +140,17 @@ function ChittiList() {
       {/* Active chittis */}
       {active.length > 0 && (
         <section className="space-y-2">
-          <p className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active</p>
+          <p className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Active
+          </p>
           {active.map((c, i) => (
-            <ChittiCard key={c.id} chitti={c} organizer={peopleById.get(c.organizerId)} fmt={fmt} index={i} />
+            <ChittiCard
+              key={c.id}
+              chitti={c}
+              organizer={peopleById.get(c.organizerId)}
+              fmt={fmt}
+              index={i}
+            />
           ))}
         </section>
       )}
@@ -126,9 +158,17 @@ function ChittiList() {
       {/* Past chittis */}
       {others.length > 0 && (
         <section className="space-y-2">
-          <p className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Past</p>
+          <p className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Past
+          </p>
           {others.map((c, i) => (
-            <ChittiCard key={c.id} chitti={c} organizer={peopleById.get(c.organizerId)} fmt={fmt} index={i} />
+            <ChittiCard
+              key={c.id}
+              chitti={c}
+              organizer={peopleById.get(c.organizerId)}
+              fmt={fmt}
+              index={i}
+            />
           ))}
         </section>
       )}
@@ -141,7 +181,10 @@ function ChittiList() {
 }
 
 function ChittiCard({
-  chitti, organizer, fmt, index,
+  chitti,
+  organizer,
+  fmt,
+  index,
 }: {
   chitti: Chitti;
   organizer?: Person;
@@ -153,9 +196,18 @@ function ChittiCard({
   const monthly = (chitti.monthlyAmount ?? 0) * (chitti.numChits ?? 1);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04 }}
+    >
       <Link to="/chitti/$chittiId" params={{ chittiId: chitti.id }}>
-        <GlassCard className={cn("p-4 transition-transform active:scale-[0.98]", chitti.status === "cancelled" && "opacity-60")}>
+        <GlassCard
+          className={cn(
+            "p-4 transition-transform active:scale-[0.98]",
+            chitti.status === "cancelled" && "opacity-60",
+          )}
+        >
           <div className="flex items-start gap-3">
             {/* Organizer avatar */}
             <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-accent/20 text-sm font-bold text-accent">
@@ -168,7 +220,9 @@ function ChittiCard({
                     {chitti.name || (organizer ? `${organizer.name}'s Chitti` : "Chitti")}
                   </div>
                   {organizer && (
-                    <div className="text-xs text-muted-foreground capitalize">by {organizer.name}</div>
+                    <div className="text-xs text-muted-foreground capitalize">
+                      by {organizer.name}
+                    </div>
                   )}
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -178,7 +232,9 @@ function ChittiCard({
                   <Coins className="h-3 w-3" />
                   {fmt(monthly)}/mo
                   {chitti.numChits > 1 && (
-                    <span className="text-[10px]">({chitti.numChits} chits × {fmt(chitti.monthlyAmount)})</span>
+                    <span className="text-[10px]">
+                      ({chitti.numChits} chits × {fmt(chitti.monthlyAmount)})
+                    </span>
                   )}
                 </span>
                 <span className="flex items-center gap-1">
@@ -187,12 +243,18 @@ function ChittiCard({
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", status.bg, status.color)}>
+                <span
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    status.bg,
+                    status.color,
+                  )}
+                >
                   <StatusIcon className="h-2.5 w-2.5" />
                   {status.label}
                 </span>
                 {chitti.availed && (
-                  <span className="flex items-center gap-1 rounded-full bg-[oklch(0.82_0.16_75/0.2)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[oklch(0.82_0.16_75)]">
+                  <span className="flex items-center gap-1 rounded-full bg-warning/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
                     <Trophy className="h-2.5 w-2.5" /> Availed
                   </span>
                 )}

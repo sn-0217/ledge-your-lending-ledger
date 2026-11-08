@@ -4,19 +4,13 @@ import { GlassCard } from "@/components/common/GlassCard";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { WebModal } from "@/components/common/WebModal";
 import { useLedge } from "@/features/dataProvider";
-import {
-  computeCategoryBalance,
-} from "@/lib/repositories";
+import { computeCategoryBalance } from "@/lib/repositories";
 import { useFormatMoney, initials, relativeDate } from "@/lib/formatters";
 import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PersonForm } from "@/components/forms/PersonForm";
@@ -78,9 +72,7 @@ function PersonDetail() {
     return cats
       .map((c) => ({
         category: c,
-        txs: txs
-          .filter((t) => t.categoryId === c.id)
-          .sort((a, b) => b.date - a.date),
+        txs: txs.filter((t) => t.categoryId === c.id).sort((a, b) => b.date - a.date),
       }))
       .map((r) => ({
         ...r,
@@ -121,7 +113,12 @@ function PersonDetail() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="flex-1" />
-        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setEditing(true)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          onClick={() => setEditing(true)}
+        >
           <Pencil className="h-4 w-4" />
         </Button>
         <WebModal open={editing} onClose={() => setEditing(false)} title="Edit person">
@@ -189,8 +186,8 @@ function PersonDetail() {
           <div
             className={cn(
               "text-3xl font-bold tabular-nums",
-              totals > 0 && "text-[oklch(0.85_0.18_155)]",
-              totals < 0 && "text-[oklch(0.78_0.22_22)]",
+              totals > 0 && "text-receive",
+              totals < 0 && "text-pay",
               totals === 0 && "text-muted-foreground",
             )}
           >
@@ -301,7 +298,10 @@ function CategoryBlock({
           <CollapsibleTrigger asChild>
             <button className="flex flex-1 items-center gap-2 text-left">
               <ChevronDown
-                className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")}
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform",
+                  open && "rotate-180",
+                )}
               />
               <div className="min-w-0">
                 {renaming ? (
@@ -338,8 +338,8 @@ function CategoryBlock({
             <div
               className={cn(
                 "text-sm font-semibold tabular-nums",
-                balance > 0 && "text-[oklch(0.85_0.18_155)]",
-                balance < 0 && "text-[oklch(0.78_0.22_22)]",
+                balance > 0 && "text-receive",
+                balance < 0 && "text-pay",
                 balance === 0 && "text-muted-foreground",
               )}
             >
@@ -460,9 +460,7 @@ function TxRow({ tx }: { tx: Transaction }) {
       <div
         className={cn(
           "grid h-9 w-9 place-items-center rounded-2xl text-xs font-bold",
-          positive
-            ? "bg-receive/18 text-receive"
-            : "bg-pay/18 text-pay",
+          positive ? "bg-receive/18 text-receive" : "bg-pay/18 text-pay",
         )}
       >
         {meta.label[0]}
@@ -503,17 +501,17 @@ function TxRow({ tx }: { tx: Transaction }) {
         <Pencil className="h-3.5 w-3.5" />
       </Button>
       <WebModal open={editOpen} onClose={() => setEditOpen(false)} title="Edit entry">
-        <TransactionForm
-          type={tx.type}
-          transaction={tx}
-          onSubmitted={() => setEditOpen(false)}
-        />
+        <TransactionForm type={tx.type} transaction={tx} onSubmitted={() => setEditOpen(false)} />
       </WebModal>
 
       {/* Delete */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-full text-muted-foreground"
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </AlertDialogTrigger>

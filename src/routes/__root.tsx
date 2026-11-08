@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { useSettings } from "@/stores/settings";
 import { DataProvider } from "@/features/dataProvider";
+import { AuthGate } from "@/components/common/AuthGate";
 import { WifiOff } from "lucide-react";
 
 function NotFoundComponent() {
@@ -22,9 +23,7 @@ function NotFoundComponent() {
     <div className="surface-gradient flex min-h-dvh items-center justify-center px-4">
       <div className="glass max-w-md rounded-3xl p-8 text-center">
         <h1 className="text-6xl font-bold">404</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          That page doesn't exist.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">That page doesn't exist.</p>
         <Link
           to="/"
           className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
@@ -69,8 +68,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       {
         name: "viewport",
-        content:
-          "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
       },
       { title: "Ledge — Personal Money & Debt Manager" },
       {
@@ -131,6 +129,8 @@ function ThemeApplier() {
     root.classList.remove("theme-mint", "theme-purple", "theme-blue", "theme-rose", "theme-amber");
     // Apply selected theme class
     root.classList.add(`theme-${accent || "mint"}`);
+    const themeColor = getComputedStyle(root).getPropertyValue("--background").trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor);
   }, [theme, accent]);
   return null;
 }
@@ -148,14 +148,14 @@ function OfflineIndicator() {
         try {
           const controller = new AbortController();
           const id = setTimeout(() => controller.abort(), 3000);
-          
+
           await fetch("https://clients3.google.com/generate_204", {
             method: "HEAD",
             mode: "no-cors",
             signal: controller.signal,
             cache: "no-store",
           });
-          
+
           clearTimeout(id);
           setIsOffline(false); // Ping succeeded, we are actually online
         } catch {
@@ -180,7 +180,7 @@ function OfflineIndicator() {
 
     window.addEventListener("online", online);
     window.addEventListener("offline", offline);
-    
+
     // Check periodically every 15 seconds to ensure status is accurate
     const interval = setInterval(checkActualOnline, 15000);
 
@@ -199,7 +199,7 @@ function OfflineIndicator() {
       <span>Offline Mode</span>
       <button
         onClick={() => setDismissed(true)}
-        className="ml-1 flex h-4 w-4 items-center justify-center rounded-full hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+        className="ml-1 flex h-4 w-4 items-center justify-center rounded-full hover:bg-foreground/10 text-xs font-bold transition-colors cursor-pointer"
         aria-label="Dismiss"
       >
         ×
@@ -212,36 +212,64 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((reg) => {
-            console.log("SW registered:", reg.scope);
-            
-            // Check for service worker updates
-            reg.addEventListener("updatefound", () => {
-              const newWorker = reg.installing;
-              if (newWorker) {
-                newWorker.addEventListener("statechange", () => {
-                  if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-                    toast.info("Update available! Reload to update Ledge.", {
-                      duration: Infinity,
-                      action: {
-                        label: "Reload",
-                        onClick: () => {
-                          newWorker.postMessage({ type: "SKIP_WAITING" });
-                          window.location.reload();
-                        },
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
+    if (import.meta.env.DEV) {
+      const removeDevelopmentServiceWorker = async () => {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const shouldReload = Boolean(navigator.serviceWorker.controller) || registrations.length > 0;
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+        await caches.delete("ledge-cache-v1");
+
+        // The old worker can control this page until its next navigation.
+        if (shouldReload && !sessionStorage.getItem("ledge:dev-sw-removed")) {
+          sessionStorage.setItem("ledge:dev-sw-removed", "true");
+          window.location.reload();
+        } else if (!shouldReload) {
+          sessionStorage.removeItem("ledge:dev-sw-removed");
+        }
+      };
+
+      void removeDevelopmentServiceWorker().catch((err) =>
+        console.error("Development service worker cleanup failed:", err),
+      );
+      return;
+    }
+
+    const registerServiceWorker = () => {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          console.log("SW registered:", reg.scope);
+
+          reg.addEventListener("updatefound", () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  toast.info("Update available! Reload to update Ledge.", {
+                    duration: Infinity,
+                    action: {
+                      label: "Reload",
+                      onClick: () => {
+                        newWorker.postMessage({ type: "SKIP_WAITING" });
+                        window.location.reload();
                       },
-                    });
-                  }
-                });
-              }
-            });
-          })
-          .catch((err) => console.error("SW registration failed:", err));
-      });
+                    },
+                  });
+                }
+              });
+            }
+          });
+        })
+        .catch((err) => console.error("SW registration failed:", err));
+    };
+
+    if (document.readyState === "complete") {
+      registerServiceWorker();
+    } else {
+      window.addEventListener("load", registerServiceWorker, { once: true });
+      return () => window.removeEventListener("load", registerServiceWorker);
     }
   }, []);
 
@@ -258,12 +286,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeApplier />
-      <DataProvider>
-        <OfflineIndicator />
-        <Outlet />
-      </DataProvider>
+      <AuthGate>
+        <DataProvider>
+          <OfflineIndicator />
+          <Outlet />
+        </DataProvider>
+      </AuthGate>
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );
 }
-

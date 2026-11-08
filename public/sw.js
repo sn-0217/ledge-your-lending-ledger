@@ -1,4 +1,5 @@
 const CACHE_NAME = 'ledge-cache-v1';
+const IS_LOCAL_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -9,11 +10,15 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
+  if (IS_LOCAL_DEV) {
+    event.waitUntil(caches.delete(CACHE_NAME));
+  } else {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.addAll(ASSETS);
+      })
+    );
+  }
   self.skipWaiting();
 });
 
@@ -35,6 +40,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Let browser handle non-GET or external API requests
   if (event.request.method !== 'GET') return;
+
+  // Never serve cached app modules while Vite is running locally.
+  if (IS_LOCAL_DEV) return;
   
   // Do not try to cache chrome-extension or external scripts
   const url = new URL(event.request.url);
