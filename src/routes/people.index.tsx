@@ -55,7 +55,7 @@ const PersonRowItem = React.memo(
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onToggleSelect(r.person.id)}
-            className="rounded-md border-white/20 data-[state=checked]:bg-primary"
+            className="rounded-md border-input data-[state=checked]:bg-primary"
           />
         )}
         <Link
@@ -74,7 +74,7 @@ const PersonRowItem = React.memo(
                   <Badge
                     key={t}
                     variant="outline"
-                    className="text-[9px] uppercase tracking-wider px-1.5 py-0 border-white/10 bg-white/5 text-muted-foreground"
+                    className="text-[9px] uppercase tracking-wider px-1.5 py-0 border-border bg-secondary/60 text-muted-foreground"
                   >
                     {t}
                   </Badge>
@@ -88,9 +88,9 @@ const PersonRowItem = React.memo(
             <div
               className={cn(
                 "text-right text-sm font-semibold tabular-nums",
-                r.balance.outstanding > 0 && "text-[oklch(0.85_0.18_155)]",
-                r.balance.outstanding < 0 && "text-[oklch(0.78_0.22_22)]",
-                r.balance.outstanding === 0 && "text-muted-foreground"
+                r.balance.outstanding > 0 && "text-receive",
+                r.balance.outstanding < 0 && "text-pay",
+                r.balance.outstanding === 0 && "text-muted-foreground",
               )}
             >
               {r.balance.outstanding === 0 ? "Settled" : fmt(Math.abs(r.balance.outstanding))}
@@ -99,7 +99,7 @@ const PersonRowItem = React.memo(
         </Link>
       </div>
     );
-  }
+  },
 );
 
 PersonRowItem.displayName = "PersonRowItem";
@@ -109,7 +109,9 @@ function PeoplePage() {
   const fmt = useFormatMoney();
   const [q, setQ] = useState("");
   const [tagFilter, setTagFilter] = useState<PersonTag | "all">("all");
-  const [balanceFilter, setBalanceFilter] = useState<"all" | "owes_me" | "i_owe" | "settled">("all");
+  const [balanceFilter, setBalanceFilter] = useState<"all" | "owes_me" | "i_owe" | "settled">(
+    "all",
+  );
 
   // Bulk Selection States
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -158,7 +160,7 @@ function PeoplePage() {
               await updatePerson(id, { tags: [...currentTags, tag] });
             }
           }
-        })
+        }),
       );
       setSelectedIds(new Set());
       setIsBulkMode(false);
@@ -200,7 +202,9 @@ function PeoplePage() {
           <h1 className="text-2xl font-bold">People</h1>
         </header>
         <GlassCard className="p-8 text-center text-sm text-muted-foreground">
-          No people added yet. Tap the green plus button below to add someone.
+          No people added yet.{" "}
+          <span className="lg:hidden">Tap the green plus button below to add someone.</span>
+          <span className="hidden lg:inline">Select New transaction to add someone.</span>
         </GlassCard>
       </div>
     );
@@ -244,7 +248,9 @@ function PeoplePage() {
         <div className="flex flex-col gap-2 pt-1">
           {/* Outstanding Filter */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground shrink-0 pr-1">Balance:</span>
+            <span className="text-[10px] uppercase font-semibold text-muted-foreground shrink-0 pr-1">
+              Balance:
+            </span>
             {[
               { id: "all", label: "All" },
               { id: "owes_me", label: "Owes me" },
@@ -258,7 +264,7 @@ function PeoplePage() {
                   "px-3 py-1 rounded-full text-xs font-medium border border-transparent transition-all whitespace-nowrap",
                   balanceFilter === f.id
                     ? "bg-primary text-primary-foreground"
-                    : "bg-white/5 text-muted-foreground hover:bg-white/10 border-white/5"
+                    : "bg-secondary/60 text-muted-foreground hover:bg-secondary border-border",
                 )}
               >
                 {f.label}
@@ -268,7 +274,9 @@ function PeoplePage() {
 
           {/* Tag Filter */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground shrink-0 pr-1">Tags:</span>
+            <span className="text-[10px] uppercase font-semibold text-muted-foreground shrink-0 pr-1">
+              Tags:
+            </span>
             {[
               { id: "all", label: "All Tags" },
               { id: "family", label: "Family" },
@@ -283,7 +291,7 @@ function PeoplePage() {
                   "px-3 py-1 rounded-full text-xs font-medium border border-transparent transition-all whitespace-nowrap",
                   tagFilter === f.id
                     ? "bg-accent text-accent-foreground font-semibold"
-                    : "bg-white/5 text-muted-foreground hover:bg-white/10 border-white/5"
+                    : "bg-secondary/60 text-muted-foreground hover:bg-secondary border-border",
                 )}
               >
                 {f.label}
@@ -300,7 +308,7 @@ function PeoplePage() {
             <Checkbox
               checked={selectedIds.size === visibleIds.length && visibleIds.length > 0}
               onCheckedChange={() => handleSelectAll(visibleIds)}
-              className="rounded-md border-white/20 data-[state=checked]:bg-primary"
+              className="rounded-md border-input data-[state=checked]:bg-primary"
             />
             <span className="text-xs font-medium">{selectedIds.size} selected</span>
           </div>
@@ -322,7 +330,7 @@ function PeoplePage() {
                   </Button>
                 ))}
               </div>
-              <div className="h-4 w-px bg-white/10 mx-1" />
+              <div className="h-4 w-px bg-border mx-1" />
               <Button
                 variant="destructive"
                 size="sm"
@@ -342,7 +350,7 @@ function PeoplePage() {
           No results. Try a different filter or search query.
         </GlassCard>
       ) : (
-        <ul className="space-y-2">
+        <ul className="grid gap-3 lg:grid-cols-2">
           {filtered.map((r) => (
             <li key={r.person.id}>
               <PersonRowItem

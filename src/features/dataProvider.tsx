@@ -18,8 +18,6 @@ import type {
   ChittiAvailedSlot,
 } from "@/lib/types";
 import { toast } from "sonner";
-import { handleDataChanged, performAutoSyncCheck } from "./backup/syncService";
-import { getDatabaseBackupPayload } from "./backup/backupService";
 
 // Types for undo actions
 type DeletedItem =
@@ -78,29 +76,6 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [lastDeleted, setLastDeleted] = useState<DeletedItem | null>(null);
-
-  // Background automatic sync checks
-  React.useEffect(() => {
-    // Delay slightly on startup to let initial queries settle
-    const startupTimer = setTimeout(() => {
-      performAutoSyncCheck(queryClient);
-    }, 1500);
-
-    // Periodic scheduled check every 30 seconds
-    const intervalId = setInterval(() => {
-      performAutoSyncCheck(queryClient);
-    }, 30000);
-
-    return () => {
-      clearTimeout(startupTimer);
-      clearInterval(intervalId);
-    };
-  }, [queryClient]);
-
-  // Helper to trigger auto-sync
-  const triggerAutoSync = () => {
-    handleDataChanged(getDatabaseBackupPayload);
-  };
 
   // Queries
   const { data: people = [], isLoading: loadingPeople } = useQuery({
@@ -191,7 +166,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["people"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      triggerAutoSync();
     },
   });
 
@@ -199,7 +173,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ id, patch }: { id: string; patch: any }) => peopleRepo.updatePerson(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["people"] });
-      triggerAutoSync();
     },
   });
 
@@ -226,7 +199,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["people"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      triggerAutoSync();
       toast.success("Person deleted", {
         action: {
           label: "Undo",
@@ -241,7 +213,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: peopleRepo.createTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      triggerAutoSync();
     },
   });
 
@@ -249,7 +220,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ id, patch }: { id: string; patch: any }) => peopleRepo.updateTransaction(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      triggerAutoSync();
     },
   });
 
@@ -264,7 +234,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      triggerAutoSync();
       toast.success("Transaction deleted", {
         action: {
           label: "Undo",
@@ -279,7 +248,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ personId, name }: { personId: string; name: string }) => peopleRepo.createCategory(personId, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      triggerAutoSync();
     },
   });
 
@@ -287,7 +255,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ id, name }: { id: string; name: string }) => peopleRepo.renameCategory(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      triggerAutoSync();
     },
   });
 
@@ -296,7 +263,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      triggerAutoSync();
     },
   });
 
@@ -305,7 +271,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: chittiRepo.createChitti,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
-      triggerAutoSync();
     },
   });
 
@@ -313,7 +278,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ id, status }: { id: string; status: ChittiStatus }) => chittiRepo.updateChittiStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
-      triggerAutoSync();
     },
   });
 
@@ -321,7 +285,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ id, slots }: { id: string; slots: ChittiAvailedSlot[] }) => chittiRepo.updateAvailedSlots(id, slots),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
-      triggerAutoSync();
     },
   });
 
@@ -329,7 +292,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ id, patch }: { id: string; patch: any }) => chittiRepo.updateChitti(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
-      triggerAutoSync();
     },
   });
 
@@ -350,7 +312,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
       queryClient.invalidateQueries({ queryKey: ["chittiPayments"] });
-      triggerAutoSync();
       toast.success("Chitti deleted", {
         action: {
           label: "Undo",
@@ -366,7 +327,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       chittiRepo.recordPayment(chittiId, month, paidAmount, paidDate, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittiPayments"] });
-      triggerAutoSync();
     },
   });
 
@@ -374,7 +334,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     mutationFn: ({ chittiId, month }: { chittiId: string; month: number }) => chittiRepo.deletePayment(chittiId, month),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittiPayments"] });
-      triggerAutoSync();
     },
   });
 
@@ -406,7 +365,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       
       // Invalidate all queries to show restored item
       queryClient.invalidateQueries();
-      triggerAutoSync();
       setLastDeleted(null);
     } catch (e) {
       toast.error("Could not undo deletion: " + (e as Error).message);
