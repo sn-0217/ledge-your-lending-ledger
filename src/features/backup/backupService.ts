@@ -1,7 +1,14 @@
 import { getDb } from "@/lib/db";
 import { LEDGE_COLLECTIONS } from "@/lib/db";
 import { queueCloudDelete, queueCloudUpsert } from "@/features/sync/cloudSync";
-import type { Person, DebtCategory, Transaction, Chitti, ChittiMonthlyPayment } from "@/lib/types";
+import type {
+  Person,
+  DebtCategory,
+  Transaction,
+  Chitti,
+  ChittiMonthlyPayment,
+  RepaymentPlan,
+} from "@/lib/types";
 
 export interface BackupData {
   app: "ledge";
@@ -12,6 +19,7 @@ export interface BackupData {
   transactions: Transaction[];
   chittis: Chitti[];
   chittiPayments: ChittiMonthlyPayment[];
+  repaymentPlans: RepaymentPlan[];
 }
 
 export function validateAndMigrateBackup(data: any): BackupData {
@@ -35,6 +43,9 @@ export function validateAndMigrateBackup(data: any): BackupData {
   const chittis: Chitti[] = Array.isArray(data.chittis) ? data.chittis : [];
   const chittiPayments: ChittiMonthlyPayment[] = Array.isArray(data.chittiPayments)
     ? data.chittiPayments
+    : [];
+  const repaymentPlans: RepaymentPlan[] = Array.isArray(data.repaymentPlans)
+    ? data.repaymentPlans
     : [];
 
   // 1. Validate People
@@ -122,15 +133,36 @@ export function validateAndMigrateBackup(data: any): BackupData {
     if (!cp.updatedAt) cp.updatedAt = cp.createdAt;
   }
 
+  // 6. Validate optional monthly repayment plans (absent in older backups).
+  for (const plan of repaymentPlans) {
+    if (!plan.id || typeof plan.id !== "string")
+      throw new Error("Validation failed: Repayment plan missing string id.");
+    if (!plan.personId || typeof plan.personId !== "string")
+      throw new Error("Validation failed: Repayment plan missing personId.");
+    if (!plan.categoryId || typeof plan.categoryId !== "string")
+      throw new Error("Validation failed: Repayment plan missing categoryId.");
+    if (
+      typeof plan.monthlyAmount !== "number" ||
+      !Number.isFinite(plan.monthlyAmount) ||
+      plan.monthlyAmount <= 0
+    )
+      throw new Error("Validation failed: Repayment plan monthly amount is invalid.");
+    if (typeof plan.firstDueDate !== "number" || !Number.isFinite(plan.firstDueDate))
+      throw new Error("Validation failed: Repayment plan due date is invalid.");
+    if (!plan.createdAt) plan.createdAt = Date.now();
+    if (!plan.updatedAt) plan.updatedAt = plan.createdAt;
+  }
+
   return {
     app: "ledge",
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     people,
     categories,
     transactions,
     chittis,
     chittiPayments,
+    repaymentPlans,
   };
 }
 
@@ -138,14 +170,16 @@ export async function getDatabaseBackupPayload(): Promise<
   Omit<BackupData, "app" | "version" | "exportedAt">
 > {
   const db = getDb();
-  const [people, categories, transactions, chittis, chittiPayments] = await Promise.all([
-    db.people.toArray(),
-    db.categories.toArray(),
-    db.transactions.toArray(),
-    db.chittis.toArray(),
-    db.chittiPayments.toArray(),
-  ]);
-  return { people, categories, transactions, chittis, chittiPayments };
+  const [people, categories, transactions, chittis, chittiPayments, repaymentPlans] =
+    await Promise.all([
+      db.people.toArray(),
+      db.categories.toArray(),
+      db.transactions.toArray(),
+      db.chittis.toArray(),
+      db.chittiPayments.toArray(),
+      db.repaymentPlans.toArray(),
+    ]);
+  return { people, categories, transactions, chittis, chittiPayments, repaymentPlans };
 }
 
 export async function importBackupPayload(payload: any) {
@@ -157,15 +191,12 @@ export async function importBackupPayload(payload: any) {
     db.transactions.toArray(),
     db.chittis.toArray(),
     db.chittiPayments.toArray(),
+    db.repaymentPlans.toArray(),
   ]);
 
   await db.transaction(
     "rw",
-    db.people,
-    db.categories,
-    db.transactions,
-    db.chittis,
-    db.chittiPayments,
+    [db.people, db.categories, db.transactions, db.chittis, db.chittiPayments, db.repaymentPlans],
     async () => {
       // Clear current database values
       await Promise.all([
@@ -174,6 +205,7 @@ export async function importBackupPayload(payload: any) {
         db.transactions.clear(),
         db.chittis.clear(),
         db.chittiPayments.clear(),
+        db.repaymentPlans.clear(),
       ]);
 
       // Bulk write values
@@ -183,6 +215,8 @@ export async function importBackupPayload(payload: any) {
       if (validated.chittis.length > 0) await db.chittis.bulkAdd(validated.chittis);
       if (validated.chittiPayments.length > 0)
         await db.chittiPayments.bulkAdd(validated.chittiPayments);
+      if (validated.repaymentPlans.length > 0)
+        await db.repaymentPlans.bulkAdd(validated.repaymentPlans);
     },
   );
 
@@ -192,6 +226,7 @@ export async function importBackupPayload(payload: any) {
     validated.transactions,
     validated.chittis,
     validated.chittiPayments,
+    validated.repaymentPlans,
   ];
   await Promise.all(
     LEDGE_COLLECTIONS.flatMap((collection, index) => [
@@ -231,7 +266,7 @@ export async function exportToJSON() {
   const data = await getDatabaseBackupPayload();
   const payload = {
     app: "ledge",
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     ...data,
   };

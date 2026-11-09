@@ -90,7 +90,14 @@ function currentDb() {
 async function readLocalRecords(): Promise<SyncCandidate[]> {
   const db = currentDb();
   const result: SyncCandidate[] = [];
-  const tables = [db.people, db.categories, db.transactions, db.chittis, db.chittiPayments];
+  const tables = [
+    db.people,
+    db.categories,
+    db.transactions,
+    db.chittis,
+    db.chittiPayments,
+    db.repaymentPlans,
+  ];
   for (const table of tables) {
     const collection = collectionForTable(table.name);
     if (!collection) continue;
@@ -211,6 +218,10 @@ async function applyLocalCandidate(candidate: SyncCandidate) {
     case "chittiPayments":
       if (candidate.deleted || !record) await db.chittiPayments.delete(candidate.recordId);
       else await db.chittiPayments.put(record as never);
+      break;
+    case "repaymentPlans":
+      if (candidate.deleted || !record) await db.repaymentPlans.delete(candidate.recordId);
+      else await db.repaymentPlans.put(record as never);
       break;
   }
 }

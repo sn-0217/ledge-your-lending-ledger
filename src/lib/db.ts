@@ -1,5 +1,12 @@
 import Dexie, { type Table } from "dexie";
-import type { Chitti, ChittiMonthlyPayment, DebtCategory, Person, Transaction } from "./types";
+import type {
+  Chitti,
+  ChittiMonthlyPayment,
+  DebtCategory,
+  Person,
+  RepaymentPlan,
+  Transaction,
+} from "./types";
 
 export const LEDGE_COLLECTIONS = [
   "people",
@@ -7,6 +14,7 @@ export const LEDGE_COLLECTIONS = [
   "transactions",
   "chittis",
   "chittiPayments",
+  "repaymentPlans",
 ] as const;
 
 export type LedgeCollection = (typeof LEDGE_COLLECTIONS)[number];
@@ -26,6 +34,7 @@ class LedgeDB extends Dexie {
   transactions!: Table<Transaction, string>;
   chittis!: Table<Chitti, string>;
   chittiPayments!: Table<ChittiMonthlyPayment, string>;
+  repaymentPlans!: Table<RepaymentPlan, string>;
   syncOutbox!: Table<SyncOutboxEntry, [string, string, string]>;
 
   constructor(name: string) {
@@ -50,6 +59,15 @@ class LedgeDB extends Dexie {
       chittis: "id, organizerId, status, createdAt, updatedAt",
       chittiPayments: "id, chittiId, month, [chittiId+month]",
       syncOutbox: "[ownerId+collection+recordId], ownerId, changedAt",
+    });
+    this.version(4).stores({
+      people: "id, name, createdAt, updatedAt",
+      categories: "id, personId, name, createdAt",
+      transactions: "id, personId, categoryId, type, date, dueDate, createdAt",
+      chittis: "id, organizerId, status, createdAt, updatedAt",
+      chittiPayments: "id, chittiId, month, [chittiId+month]",
+      syncOutbox: "[ownerId+collection+recordId], ownerId, changedAt",
+      repaymentPlans: "id, personId, categoryId, firstDueDate, createdAt, updatedAt",
     });
   }
 }
@@ -84,20 +102,28 @@ export async function migrateLegacyLocalDatabase(userId: string) {
 
   const legacy = getDatabase("ledge-db");
   const accountDb = getDatabase(`ledge-db-user-${userId}`);
-  const [legacyPeople, legacyCategories, legacyTransactions, legacyChittis, legacyPayments] =
-    await Promise.all([
-      legacy.people.toArray(),
-      legacy.categories.toArray(),
-      legacy.transactions.toArray(),
-      legacy.chittis.toArray(),
-      legacy.chittiPayments.toArray(),
-    ]);
+  const [
+    legacyPeople,
+    legacyCategories,
+    legacyTransactions,
+    legacyChittis,
+    legacyPayments,
+    legacyRepaymentPlans,
+  ] = await Promise.all([
+    legacy.people.toArray(),
+    legacy.categories.toArray(),
+    legacy.transactions.toArray(),
+    legacy.chittis.toArray(),
+    legacy.chittiPayments.toArray(),
+    legacy.repaymentPlans.toArray(),
+  ]);
   const localRecords = [
     ...legacyPeople,
     ...legacyCategories,
     ...legacyTransactions,
     ...legacyChittis,
     ...legacyPayments,
+    ...legacyRepaymentPlans,
   ];
   if (localRecords.length === 0) return;
 
@@ -107,22 +133,28 @@ export async function migrateLegacyLocalDatabase(userId: string) {
     accountDb.transactions.count(),
     accountDb.chittis.count(),
     accountDb.chittiPayments.count(),
+    accountDb.repaymentPlans.count(),
   ]).then((counts) => counts.reduce((total, count) => total + count, 0));
 
   if (accountRecordCount === 0) {
     await accountDb.transaction(
       "rw",
-      accountDb.people,
-      accountDb.categories,
-      accountDb.transactions,
-      accountDb.chittis,
-      accountDb.chittiPayments,
+      [
+        accountDb.people,
+        accountDb.categories,
+        accountDb.transactions,
+        accountDb.chittis,
+        accountDb.chittiPayments,
+        accountDb.repaymentPlans,
+      ],
       async () => {
         if (legacyPeople.length) await accountDb.people.bulkPut(legacyPeople);
         if (legacyCategories.length) await accountDb.categories.bulkPut(legacyCategories);
         if (legacyTransactions.length) await accountDb.transactions.bulkPut(legacyTransactions);
         if (legacyChittis.length) await accountDb.chittis.bulkPut(legacyChittis);
         if (legacyPayments.length) await accountDb.chittiPayments.bulkPut(legacyPayments);
+        if (legacyRepaymentPlans.length)
+          await accountDb.repaymentPlans.bulkPut(legacyRepaymentPlans);
       },
     );
   }

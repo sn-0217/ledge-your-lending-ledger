@@ -34,6 +34,7 @@ export interface TransactionFormProps {
   type: TransactionType;
   defaultPersonId?: string;
   defaultCategoryId?: string;
+  defaultAmount?: number;
   /** When provided the form operates in edit mode */
   transaction?: Transaction;
   onSubmitted?: () => void;
@@ -58,6 +59,7 @@ export function TransactionForm({
   type,
   defaultPersonId,
   defaultCategoryId,
+  defaultAmount,
   transaction,
   onSubmitted,
 }: TransactionFormProps) {
@@ -77,17 +79,15 @@ export function TransactionForm({
     defaultValues: {
       personId: transaction?.personId ?? defaultPersonId ?? "",
       categoryId: transaction?.categoryId ?? defaultCategoryId ?? "",
-      amount: transaction?.amount ?? (undefined as unknown as number),
+      amount: transaction?.amount ?? defaultAmount ?? (undefined as unknown as number),
       date: transaction ? new Date(transaction.date).toISOString().slice(0, 10) : todayISO(),
-      dueDate: transaction?.dueDate
-        ? new Date(transaction.dueDate).toISOString().slice(0, 10)
-        : "",
+      dueDate: transaction?.dueDate ? new Date(transaction.dueDate).toISOString().slice(0, 10) : "",
       notes: transaction?.notes ?? "",
     },
   });
 
   const personId = form.watch("personId");
-  
+
   const categories = useMemo(() => {
     if (!personId) return [];
     return allCategories.filter((c) => c.personId === personId);

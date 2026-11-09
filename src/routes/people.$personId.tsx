@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/common/GlassCard";
 import { PersonAvatar } from "@/components/common/PersonAvatar";
+import { RepaymentPlanPanel } from "@/components/common/RepaymentPlanPanel";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { WebModal } from "@/components/common/WebModal";
 import { useLedge } from "@/features/dataProvider";
@@ -358,6 +359,14 @@ function CategoryBlock({
         </div>
         <CollapsibleContent>
           <div className="space-y-2 border-t border-border/60 p-3">
+            {balance < -0.005 && (
+              <RepaymentPlanPanel
+                personId={personId}
+                categoryId={category.id}
+                outstanding={balance}
+                transactions={txs}
+              />
+            )}
             <div className="grid grid-cols-4 gap-1.5">
               {(
                 [

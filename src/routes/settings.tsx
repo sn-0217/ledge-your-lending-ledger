@@ -54,26 +54,24 @@ export const Route = createFileRoute("/settings")({
 
 async function clearAllData() {
   const db = getDb();
-  const [people, categories, transactions, chittis, payments] = await Promise.all([
+  const [people, categories, transactions, chittis, payments, repaymentPlans] = await Promise.all([
     db.people.toArray(),
     db.categories.toArray(),
     db.transactions.toArray(),
     db.chittis.toArray(),
     db.chittiPayments.toArray(),
+    db.repaymentPlans.toArray(),
   ]);
   await db.transaction(
     "rw",
-    db.people,
-    db.categories,
-    db.transactions,
-    db.chittis,
-    db.chittiPayments,
+    [db.people, db.categories, db.transactions, db.chittis, db.chittiPayments, db.repaymentPlans],
     async () => {
       await db.transactions.clear();
       await db.categories.clear();
       await db.people.clear();
       await db.chittiPayments.clear();
       await db.chittis.clear();
+      await db.repaymentPlans.clear();
     },
   );
   await Promise.all([
@@ -82,6 +80,7 @@ async function clearAllData() {
     ...transactions.map((row) => queueCloudDelete("transactions", row.id)),
     ...chittis.map((row) => queueCloudDelete("chittis", row.id)),
     ...payments.map((row) => queueCloudDelete("chittiPayments", row.id)),
+    ...repaymentPlans.map((row) => queueCloudDelete("repaymentPlans", row.id)),
   ]);
 }
 

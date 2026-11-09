@@ -35,6 +35,19 @@ export interface Transaction {
   date: number;
   dueDate?: number;
   notes?: string;
+  repaymentPlanId?: ID;
+  repaymentDueDate?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A no-interest schedule for manually repaying an existing person/category debt. */
+export interface RepaymentPlan {
+  id: ID;
+  personId: ID;
+  categoryId: ID;
+  monthlyAmount: number;
+  firstDueDate: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -77,12 +90,12 @@ export interface ChittiAvailedSlot {
 
 export interface Chitti {
   id: ID;
-  organizerId: ID;      // Person.id who runs this chitti
-  name?: string;        // optional label
-  monthlyAmount: number;// amount per chit per month (e.g. 5000)
-  numChits: number;     // how many chits I joined (e.g. 2)
-  startDate: number;    // timestamp of month-1 (first day of start month)
-  totalMonths: number;  // total duration in months
+  organizerId: ID; // Person.id who runs this chitti
+  name?: string; // optional label
+  monthlyAmount: number; // amount per chit per month (e.g. 5000)
+  numChits: number; // how many chits I joined (e.g. 2)
+  startDate: number; // timestamp of month-1 (first day of start month)
+  totalMonths: number; // total duration in months
   status: ChittiStatus;
   // Availed slots (one per joined chit)
   availedSlots?: ChittiAvailedSlot[];
@@ -98,9 +111,9 @@ export interface Chitti {
 export interface ChittiMonthlyPayment {
   id: ID;
   chittiId: ID;
-  month: number;    // 1-based round number
+  month: number; // 1-based round number
   paidAmount: number;
-  paidDate: number;  // timestamp
+  paidDate: number; // timestamp
   notes?: string;
   createdAt: number;
   updatedAt: number;
