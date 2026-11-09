@@ -7,6 +7,7 @@ import {
   Clock3,
   Plus,
   Pencil,
+  RotateCcw,
   Trash2,
   WalletCards,
   Zap,
@@ -36,6 +37,7 @@ import {
   deleteRepaymentPlan,
   updateRepaymentPlan,
 } from "@/lib/repaymentPlanRepositories";
+import { deleteTransaction } from "@/lib/repositories";
 import {
   dateOnly,
   fromLocalDateInput,
@@ -106,6 +108,7 @@ export function RepaymentPlanPanel({
   const [scheduleMode, setScheduleMode] = useState<"months" | "amount">("months");
   const [editingPlan, setEditingPlan] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resetPayments, setResetPayments] = useState<Transaction[] | null>(null);
   const [firstDueDate, setFirstDueDate] = useState(nextMonthDateInput);
   const [selected, setSelected] = useState<RepaymentInstallment | null>(null);
   const [suggestedPayment, setSuggestedPayment] = useState(0);
@@ -229,6 +232,17 @@ export function RepaymentPlanPanel({
         : Math.min(schedule.monthlyAmount, schedule.remainingBalance),
     );
     setPaymentOpen(true);
+  }
+
+  async function confirmResetPayments() {
+    if (!resetPayments?.length) return;
+    try {
+      await Promise.all(resetPayments.map((payment) => deleteTransaction(payment.id)));
+      toast.success("Month payments reset and balance restored");
+      setResetPayments(null);
+    } catch (error) {
+      toast.error((error as Error).message || "Could not reset payments");
+    }
   }
 
   return (
@@ -419,19 +433,35 @@ export function RepaymentPlanPanel({
                           : "planned"}
                       </div>
                     </div>
-                    {installment.status !== "covered" && schedule.remainingBalance > 0 && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0 px-2 sm:px-3"
-                        onClick={() => openPayment(installment)}
-                      >
-                        <WalletCards className="h-3.5 w-3.5 sm:mr-1.5" />
-                        <span className="hidden sm:inline">
-                          {installment.remainingAmount > 0 ? "Record payment" : "Extra"}
-                        </span>
-                      </Button>
-                    )}
+                    <div className="flex shrink-0 items-center gap-1">
+                      {periodPayments.length > 0 && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground"
+                          aria-label={
+                            "Reset " + formatDate(installment.dueDate, true) + " payments"
+                          }
+                          title="Reset this month's payments"
+                          onClick={() => setResetPayments(periodPayments)}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {installment.status !== "covered" && schedule.remainingBalance > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="px-2 sm:px-3"
+                          onClick={() => openPayment(installment)}
+                        >
+                          <WalletCards className="h-3.5 w-3.5 sm:mr-1.5" />
+                          <span className="hidden sm:inline">
+                            {installment.remainingAmount > 0 ? "Record payment" : "Extra"}
+                          </span>
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -562,6 +592,28 @@ export function RepaymentPlanPanel({
           />
         </WebModal>
       )}
+
+      <AlertDialog
+        open={!!resetPayments?.length}
+        onOpenChange={(open) => {
+          if (!open) setResetPayments(null);
+        }}
+      >
+        <AlertDialogContent className="glass-strong">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset this month's payments?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes {resetPayments?.length ?? 0} payment
+              {resetPayments?.length === 1 ? "" : "s"} recorded for this month and restores the
+              balance. Payments in other months stay unchanged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep payments</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmResetPayments}>Reset month</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
