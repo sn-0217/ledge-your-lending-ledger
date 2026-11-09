@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { queueCloudDelete, queueCloudUpsert } from "@/features/sync/cloudSync";
-import { getRepaymentPlanProgress } from "@/lib/repaymentPlanUtils";
+import { getRepaymentPlanSchedule } from "@/lib/repaymentPlanUtils";
 import type {
   CategoryBalance,
   DebtCategory,
@@ -183,19 +183,27 @@ export async function createTransaction(
       throw new Error("Payment cannot be greater than the remaining balance.");
     }
 
-    if (!input.repaymentPlanId) {
-      const repaymentPlan = await db.repaymentPlans
-        .where("categoryId")
-        .equals(input.categoryId)
-        .first();
-      if (repaymentPlan) {
-        const progress = getRepaymentPlanProgress(repaymentPlan, balance, existingTransactions);
-        transactionInput = {
-          ...input,
-          repaymentPlanId: repaymentPlan.id,
-          repaymentDueDate: progress.dueDate ?? repaymentPlan.firstDueDate,
-        };
-      }
+    const repaymentPlan = input.repaymentPlanId
+      ? await db.repaymentPlans.get(input.repaymentPlanId)
+      : await db.repaymentPlans.where("categoryId").equals(input.categoryId).first();
+    if (
+      input.repaymentPlanId &&
+      (!repaymentPlan || repaymentPlan.categoryId !== input.categoryId)
+    ) {
+      throw new Error("Choose a valid repayment plan for this category.");
+    }
+    if (repaymentPlan) {
+      const schedule = getRepaymentPlanSchedule(repaymentPlan, balance, existingTransactions);
+      const nextInstallment =
+        schedule.installments.find((installment) => installment.remainingAmount > 0.005) ??
+        schedule.installments.at(-1);
+      const selectedDueDate = input.repaymentDueDate ?? nextInstallment?.dueDate;
+      if (!selectedDueDate) throw new Error("Could not find a repayment month for this payment.");
+      transactionInput = {
+        ...input,
+        repaymentPlanId: repaymentPlan.id,
+        repaymentDueDate: selectedDueDate,
+      };
     }
   }
   const ts = now();

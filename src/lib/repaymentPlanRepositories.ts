@@ -11,7 +11,7 @@ const uid = () =>
 export async function createRepaymentPlan(input: {
   personId: ID;
   categoryId: ID;
-  monthlyAmount: number;
+  totalMonths: number;
   firstDueDate: number;
 }): Promise<RepaymentPlan> {
   const db = getDb();
@@ -25,8 +25,8 @@ export async function createRepaymentPlan(input: {
       "This category already has a repayment plan. Resume the existing plan instead.",
     );
   }
-  if (!Number.isFinite(input.monthlyAmount) || input.monthlyAmount <= 0) {
-    throw new Error("Enter a monthly payment greater than zero.");
+  if (!Number.isInteger(input.totalMonths) || input.totalMonths < 1 || input.totalMonths > 600) {
+    throw new Error("Choose a repayment duration between 1 and 600 months.");
   }
 
   const transactions = await db.transactions.where("categoryId").equals(input.categoryId).toArray();
@@ -34,13 +34,20 @@ export async function createRepaymentPlan(input: {
   if (balance.outstanding >= -0.005) {
     throw new Error("A repayment plan is only available when you owe money in this category.");
   }
+  const totalAmount = Math.round(Math.abs(balance.outstanding) * 100) / 100;
+  if (input.totalMonths > Math.round(totalAmount * 100)) {
+    throw new Error("The duration is too long for the amount owed.");
+  }
+  const monthlyAmount = Math.round((totalAmount / input.totalMonths) * 100) / 100;
 
   const timestamp = Date.now();
   const plan: RepaymentPlan = {
     id: uid(),
     personId: input.personId,
     categoryId: input.categoryId,
-    monthlyAmount: input.monthlyAmount,
+    totalAmount,
+    totalMonths: input.totalMonths,
+    monthlyAmount,
     firstDueDate: input.firstDueDate,
     createdAt: timestamp,
     updatedAt: timestamp,

@@ -46,6 +46,10 @@ export interface RepaymentPlan {
   id: ID;
   personId: ID;
   categoryId: ID;
+  /** Snapshot of the amount owed when the plan was created. */
+  totalAmount?: number;
+  /** Number of monthly installments. Optional for compatibility with early plan records. */
+  totalMonths?: number;
   monthlyAmount: number;
   firstDueDate: number;
   createdAt: number;

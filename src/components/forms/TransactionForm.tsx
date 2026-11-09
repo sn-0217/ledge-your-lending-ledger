@@ -35,6 +35,8 @@ export interface TransactionFormProps {
   defaultPersonId?: string;
   defaultCategoryId?: string;
   defaultAmount?: number;
+  repaymentPlanId?: string;
+  repaymentDueDate?: number;
   /** When provided the form operates in edit mode */
   transaction?: Transaction;
   onSubmitted?: () => void;
@@ -60,6 +62,8 @@ export function TransactionForm({
   defaultPersonId,
   defaultCategoryId,
   defaultAmount,
+  repaymentPlanId,
+  repaymentDueDate,
   transaction,
   onSubmitted,
 }: TransactionFormProps) {
@@ -138,6 +142,8 @@ export function TransactionForm({
           date: new Date(values.date).getTime(),
           dueDate: values.dueDate ? new Date(values.dueDate).getTime() : undefined,
           notes: values.notes?.trim() || undefined,
+          repaymentPlanId,
+          repaymentDueDate,
         });
         toast.success(labels.success);
       }

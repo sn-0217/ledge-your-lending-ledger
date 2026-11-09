@@ -149,13 +149,25 @@ export function validateAndMigrateBackup(data: any): BackupData {
       throw new Error("Validation failed: Repayment plan monthly amount is invalid.");
     if (typeof plan.firstDueDate !== "number" || !Number.isFinite(plan.firstDueDate))
       throw new Error("Validation failed: Repayment plan due date is invalid.");
+    if (
+      plan.totalAmount !== undefined &&
+      (typeof plan.totalAmount !== "number" ||
+        !Number.isFinite(plan.totalAmount) ||
+        plan.totalAmount <= 0)
+    )
+      throw new Error("Validation failed: Repayment plan total amount is invalid.");
+    if (
+      plan.totalMonths !== undefined &&
+      (!Number.isInteger(plan.totalMonths) || plan.totalMonths < 1 || plan.totalMonths > 600)
+    )
+      throw new Error("Validation failed: Repayment plan duration is invalid.");
     if (!plan.createdAt) plan.createdAt = Date.now();
     if (!plan.updatedAt) plan.updatedAt = plan.createdAt;
   }
 
   return {
     app: "ledge",
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     people,
     categories,
@@ -266,7 +278,7 @@ export async function exportToJSON() {
   const data = await getDatabaseBackupPayload();
   const payload = {
     app: "ledge",
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     ...data,
   };
