@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Clock3,
   Plus,
+  Pencil,
+  Trash2,
   WalletCards,
   Zap,
   type LucideIcon,
@@ -14,11 +16,26 @@ import { TransactionForm } from "@/components/forms/TransactionForm";
 import { WebModal } from "@/components/common/WebModal";
 import { GlassCard } from "@/components/common/GlassCard";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getDb } from "@/lib/db";
 import { useFormatMoney } from "@/lib/formatters";
-import { createRepaymentPlan } from "@/lib/repaymentPlanRepositories";
+import {
+  createRepaymentPlan,
+  deleteRepaymentPlan,
+  updateRepaymentPlan,
+} from "@/lib/repaymentPlanRepositories";
 import {
   dateOnly,
   fromLocalDateInput,
@@ -85,33 +102,117 @@ export function RepaymentPlanPanel({
   const [planOpen, setPlanOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [monthsInput, setMonthsInput] = useState("12");
+  const [monthlyAmountInput, setMonthlyAmountInput] = useState("");
+  const [scheduleMode, setScheduleMode] = useState<"months" | "amount">("months");
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [firstDueDate, setFirstDueDate] = useState(nextMonthDateInput);
   const [selected, setSelected] = useState<RepaymentInstallment | null>(null);
   const [suggestedPayment, setSuggestedPayment] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  if (outstanding >= -0.005 || !plans) return null;
+  if (!plans) return null;
+  if (outstanding >= -0.005 && !plan) return null;
   const owed = Math.abs(outstanding);
   const months = Number(monthsInput);
-  const estimatedMonthly = months > 0 ? Math.round((owed / months) * 100) / 100 : 0;
   const schedule = plan ? getRepaymentPlanSchedule(plan, outstanding, transactions) : undefined;
+  const amountToSchedule = schedule?.totalAmount ?? owed;
+  const estimatedMonthly =
+    scheduleMode === "months"
+      ? months > 0
+        ? Math.round((amountToSchedule / months) * 100) / 100
+        : 0
+      : Number(monthlyAmountInput) || 0;
+  const estimatedMonths =
+    scheduleMode === "amount" && estimatedMonthly > 0
+      ? Math.ceil(amountToSchedule / estimatedMonthly)
+      : months;
+
+  const planPayments = plan
+    ? transactions.filter(
+        (item) => item.type === "repayment_out" && item.repaymentPlanId === plan.id,
+      )
+    : [];
+
+  function openCreateSchedule() {
+    setEditingPlan(false);
+    setScheduleMode("months");
+    const defaultMonths = Math.min(12, Math.max(1, Math.round(owed * 100)));
+    setMonthsInput(String(defaultMonths));
+    setMonthlyAmountInput((Math.round((owed / defaultMonths) * 100) / 100).toFixed(2));
+    setFirstDueDate(nextMonthDateInput());
+    setPlanOpen(true);
+  }
+
+  function openEditSchedule() {
+    if (!plan || !schedule) return;
+    setEditingPlan(true);
+    setScheduleMode(plan.scheduleMode ?? "amount");
+    setMonthsInput(String(schedule.totalMonths));
+    setMonthlyAmountInput(schedule.monthlyAmount.toFixed(2));
+    setFirstDueDate(toLocalDateInput(plan.firstDueDate));
+    setPlanOpen(true);
+  }
+
+  function onMonthsChange(value: string) {
+    setScheduleMode("months");
+    setMonthsInput(value);
+    const nextMonths = Number(value);
+    if (nextMonths > 0) {
+      setMonthlyAmountInput((Math.round((amountToSchedule / nextMonths) * 100) / 100).toFixed(2));
+    } else setMonthlyAmountInput("");
+  }
+
+  function onMonthlyAmountChange(value: string) {
+    setScheduleMode("amount");
+    setMonthlyAmountInput(value);
+    const amount = Number(value);
+    if (amount > 0) setMonthsInput(String(Math.ceil(amountToSchedule / amount)));
+  }
 
   async function submitPlan() {
-    const totalMonths = Number(monthsInput);
+    const chosenMonthly = Math.round(Number(monthlyAmountInput) * 100) / 100;
+    const totalMonths =
+      scheduleMode === "months"
+        ? Number(monthsInput)
+        : chosenMonthly > 0
+          ? Math.ceil(amountToSchedule / chosenMonthly)
+          : 0;
     if (!Number.isInteger(totalMonths) || totalMonths < 1 || totalMonths > 600) {
       toast.error("Choose a duration between 1 and 600 months.");
       return;
     }
+    const monthlyAmount =
+      scheduleMode === "months"
+        ? Math.round((amountToSchedule / totalMonths) * 100) / 100
+        : chosenMonthly;
+    if (!Number.isFinite(monthlyAmount) || monthlyAmount <= 0) {
+      toast.error("Enter a monthly amount greater than zero.");
+      return;
+    }
     try {
       setSaving(true);
-      await createRepaymentPlan({
-        personId,
-        categoryId,
-        totalMonths,
-        firstDueDate: fromLocalDateInput(firstDueDate),
-      });
+      if (editingPlan && plan) {
+        await updateRepaymentPlan(plan.id, {
+          totalMonths,
+          monthlyAmount,
+          scheduleMode,
+          firstDueDate: fromLocalDateInput(firstDueDate),
+        });
+      } else {
+        await createRepaymentPlan({
+          personId,
+          categoryId,
+          totalMonths,
+          monthlyAmount,
+          scheduleMode,
+          firstDueDate: fromLocalDateInput(firstDueDate),
+        });
+      }
       setPlanOpen(false);
-      toast.success("Monthly repayment schedule created");
+      toast.success(
+        editingPlan ? "Repayment schedule updated" : "Monthly repayment schedule created",
+      );
     } catch (error) {
       toast.error((error as Error).message || "Could not create schedule");
     } finally {
@@ -130,16 +231,55 @@ export function RepaymentPlanPanel({
     setPaymentOpen(true);
   }
 
-  const planPayments = plan
-    ? transactions.filter(
-        (item) => item.type === "repayment_out" && item.repaymentPlanId === plan.id,
-      )
-    : [];
-
   return (
     <div className="space-y-4">
       {plan && schedule ? (
         <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Monthly repayment schedule</h3>
+              <p className="text-xs text-muted-foreground">
+                First due {formatDate(plan.firstDueDate)}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <Button variant="outline" size="sm" onClick={openEditSchedule}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit schedule
+              </Button>
+              <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-destructive">
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="glass-strong">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove this repayment schedule?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The schedule will be removed. Payments already recorded stay in the ledger and
+                      continue to affect the balance.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep schedule</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        try {
+                          await deleteRepaymentPlan(plan.id);
+                          setDeleteConfirmOpen(false);
+                          toast.success("Repayment schedule removed");
+                        } catch (error) {
+                          toast.error((error as Error).message || "Could not remove schedule");
+                        }
+                      }}
+                    >
+                      Remove schedule
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
           <GlassCard strong className="space-y-4 p-4">
             <div className="grid grid-cols-2 gap-4 border-b border-border/40 pb-3">
               <div>
@@ -311,7 +451,7 @@ export function RepaymentPlanPanel({
                 Current balance: {fmt(owed)} · choose how many months to repay.
               </p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => setPlanOpen(true)}>
+            <Button size="sm" variant="outline" onClick={openCreateSchedule}>
               <Plus className="mr-1.5 h-3.5 w-3.5" /> Set schedule
             </Button>
           </div>
@@ -321,16 +461,20 @@ export function RepaymentPlanPanel({
       <WebModal
         open={planOpen}
         onClose={() => setPlanOpen(false)}
-        title="Set monthly repayment schedule"
+        title={editingPlan ? "Edit repayment schedule" : "Set monthly repayment schedule"}
       >
         <div className="space-y-4">
           <div className="rounded-xl bg-secondary/30 p-3">
             <div className="text-xs text-muted-foreground">Amount to split</div>
             <div className="mt-0.5 text-xl font-bold tabular-nums">{fmt(owed)}</div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={"repayment-months-" + categoryId}>Repayment duration</Label>
-            <div className="flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            Monthly amount = total ÷ months. Months = total ÷ monthly amount, rounded up; the final
+            installment is adjusted to the remaining balance.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor={"repayment-months-" + categoryId}>Number of months</Label>
               <Input
                 id={"repayment-months-" + categoryId}
                 type="number"
@@ -339,9 +483,20 @@ export function RepaymentPlanPanel({
                 step="1"
                 inputMode="numeric"
                 value={monthsInput}
-                onChange={(event) => setMonthsInput(event.target.value)}
+                onChange={(event) => onMonthsChange(event.target.value)}
               />
-              <span className="text-sm text-muted-foreground">months</span>
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor={"repayment-monthly-" + categoryId}>Amount per month</Label>
+              <Input
+                id={"repayment-monthly-" + categoryId}
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={monthlyAmountInput}
+                onChange={(event) => onMonthlyAmountChange(event.target.value)}
+              />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -351,17 +506,36 @@ export function RepaymentPlanPanel({
               type="date"
               value={firstDueDate}
               onChange={(event) => setFirstDueDate(event.target.value)}
+              disabled={editingPlan && planPayments.length > 0}
             />
+            {editingPlan && planPayments.length > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                The first due date is locked after a payment is recorded so payment months stay
+                aligned.
+              </p>
+            )}
           </div>
           <div className="rounded-xl border border-border/50 px-3 py-2.5 text-sm">
-            <span className="text-muted-foreground">Estimated monthly amount</span>
-            <strong className="float-right">{fmt(estimatedMonthly)}</strong>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Estimated schedule</span>
+              <strong className="text-right">
+                {estimatedMonths} months · {fmt(estimatedMonthly)} / month
+              </strong>
+            </div>
             <p className="mt-1 clear-both text-[11px] text-muted-foreground">
-              Any rounding difference is added to the final installment.
+              {scheduleMode === "amount"
+                ? "The month count rounds up; the final installment is capped at the remaining amount."
+                : "Rounding is spread across installments so they add up to the total."}
             </p>
           </div>
           <Button className="w-full" onClick={submitPlan} disabled={saving || !firstDueDate}>
-            {saving ? "Creating schedule…" : "Create monthly schedule"}
+            {saving
+              ? editingPlan
+                ? "Saving schedule…"
+                : "Creating schedule…"
+              : editingPlan
+                ? "Save schedule"
+                : "Create monthly schedule"}
           </Button>
         </div>
       </WebModal>

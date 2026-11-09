@@ -359,14 +359,12 @@ function CategoryBlock({
         </div>
         <CollapsibleContent>
           <div className="space-y-2 border-t border-border/60 p-3">
-            {balance < -0.005 && (
-              <RepaymentPlanPanel
-                personId={personId}
-                categoryId={category.id}
-                outstanding={balance}
-                transactions={txs}
-              />
-            )}
+            <RepaymentPlanPanel
+              personId={personId}
+              categoryId={category.id}
+              outstanding={balance}
+              transactions={txs}
+            />
             <div className="grid grid-cols-4 gap-1.5">
               {(
                 [

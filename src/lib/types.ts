@@ -50,6 +50,8 @@ export interface RepaymentPlan {
   totalAmount?: number;
   /** Number of monthly installments. Optional for compatibility with early plan records. */
   totalMonths?: number;
+  /** Whether the user chose the duration or the fixed monthly target. */
+  scheduleMode?: "months" | "amount";
   monthlyAmount: number;
   firstDueDate: number;
   createdAt: number;

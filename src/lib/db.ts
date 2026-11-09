@@ -69,6 +69,15 @@ class LedgeDB extends Dexie {
       syncOutbox: "[ownerId+collection+recordId], ownerId, changedAt",
       repaymentPlans: "id, personId, categoryId, firstDueDate, createdAt, updatedAt",
     });
+    this.version(5).stores({
+      people: "id, name, createdAt, updatedAt",
+      categories: "id, personId, name, createdAt",
+      transactions: "id, personId, categoryId, repaymentPlanId, type, date, dueDate, createdAt",
+      chittis: "id, organizerId, status, createdAt, updatedAt",
+      chittiPayments: "id, chittiId, month, [chittiId+month]",
+      syncOutbox: "[ownerId+collection+recordId], ownerId, changedAt",
+      repaymentPlans: "id, personId, categoryId, firstDueDate, createdAt, updatedAt",
+    });
   }
 }
 

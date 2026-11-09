@@ -61,7 +61,10 @@ export function getRepaymentPlanSchedule(
   const totalCents = Math.round(totalAmount * 100);
   const baseCents = Math.floor(totalCents / totalMonths);
   const extraCents = totalCents % totalMonths;
-  const hasFixedDuration = plan.totalAmount !== undefined && plan.totalMonths !== undefined;
+  const hasEvenSplit =
+    plan.scheduleMode === "months" &&
+    plan.totalAmount !== undefined &&
+    plan.totalMonths !== undefined;
   const paymentsByDueDate = new Map<number, number>();
   for (const payment of planPayments) {
     const dueDate = dateOnly(payment.repaymentDueDate ?? payment.date);
@@ -73,7 +76,7 @@ export function getRepaymentPlanSchedule(
   const installments: RepaymentInstallment[] = Array.from({ length: totalMonths }, (_, index) => {
     const dueDate = dateOnly(dueDateForPeriod(plan.firstDueDate, index));
     const isFinal = index === totalMonths - 1;
-    const scheduledBase = hasFixedDuration
+    const scheduledBase = hasEvenSplit
       ? (baseCents + (index < extraCents ? 1 : 0)) / 100
       : isFinal
         ? roundCurrency(totalAmount - monthlyAmount * (totalMonths - 1))
@@ -82,6 +85,10 @@ export function getRepaymentPlanSchedule(
     extraCredit = roundCurrency(extraCredit - creditUsed);
     let scheduledAmount = Math.max(0, roundCurrency(scheduledBase - creditUsed));
     const paidAmount = roundCurrency(paymentsByDueDate.get(dueDate) ?? 0);
+
+    if (remainingBalance <= 0.005 && paidAmount <= 0.005) {
+      scheduledAmount = 0;
+    }
 
     // Keep the last scheduled amount within the debt still owed, accounting for
     // payments already assigned to that installment.
