@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   CalendarDays,
@@ -96,6 +97,7 @@ export function RepaymentPlanPanel({
   transactions: Transaction[];
 }) {
   const fmt = useFormatMoney();
+  const queryClient = useQueryClient();
   const plans = useLiveQuery(
     () => getDb().repaymentPlans.where("categoryId").equals(categoryId).toArray(),
     [categoryId],
@@ -238,6 +240,7 @@ export function RepaymentPlanPanel({
     if (!resetPayments?.length) return;
     try {
       await Promise.all(resetPayments.map((payment) => deleteTransaction(payment.id)));
+      await queryClient.invalidateQueries({ queryKey: ["transactions"] });
       toast.success("Month payments reset and balance restored");
       setResetPayments(null);
     } catch (error) {
