@@ -17,7 +17,6 @@ import {
   Calendar,
   Layers,
   Coins,
-  Keyboard,
   XCircle,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useRef } from "react";
@@ -236,14 +235,6 @@ function Dashboard() {
               {todayLabel()}
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight lg:text-3xl">{greeting()} 👋</h1>
-          </div>
-          {/* Quick Keyboard shortcuts hint */}
-          <div className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground bg-secondary/60 px-2 py-1 rounded-md">
-            <Keyboard className="h-3 w-3" />
-            <span>
-              Shortcuts: <kbd className="font-semibold">/</kbd> search,{" "}
-              <kbd className="font-semibold">N</kbd> add
-            </span>
           </div>
         </div>
 
