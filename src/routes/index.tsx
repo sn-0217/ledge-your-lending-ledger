@@ -5,6 +5,9 @@ import { PersonAvatar } from "@/components/common/PersonAvatar";
 import { ClientOnly } from "@/components/common/ClientOnly";
 import { useLedge, type PersonRow } from "@/features/dataProvider";
 import { useFormatMoney, relativeDate } from "@/lib/formatters";
+import { getRepaymentPlanSchedule, dateOnly } from "@/lib/repaymentPlanUtils";
+import { getDb } from "@/lib/db";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
   AlertCircle,
   ArrowDownLeft,
@@ -17,7 +20,6 @@ import {
   Calendar,
   Layers,
   Coins,
-  Keyboard,
   XCircle,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useRef } from "react";
@@ -63,8 +65,20 @@ function DashboardSkeleton() {
   );
 }
 
+interface DashboardPayment {
+  key: string;
+  personId: string;
+  personName: string;
+  categoryName: string;
+  dueDate: number;
+  amount: number;
+  direction: "pay" | "receive";
+  month?: number;
+}
+
 function Dashboard() {
   const { personRows: rows, transactions: txs, chittis, isLoading } = useLedge();
+  const repaymentPlans = useLiveQuery(() => getDb().repaymentPlans.toArray(), []);
   const fmt = useFormatMoney();
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -135,43 +149,94 @@ function Dashboard() {
     );
   }, [rows]);
 
-  // Overdue entries count
-  const overdueCount = useMemo(() => {
-    if (!rows.length || !txs.length) return 0;
-    const now = Date.now();
-    const settled = new Set(
-      rows.flatMap((r) => r.categories.filter((c) => c.balance.settled).map((c) => c.category.id)),
+  // Due items are based on the outstanding category balance and plan installments,
+  // rather than the original transaction amount/date when a schedule exists.
+  const { overduePayments, upcomingPayments } = useMemo(() => {
+    const plans = repaymentPlans ?? [];
+    const today = dateOnly(Date.now());
+    const horizon = new Date(today);
+    horizon.setDate(horizon.getDate() + 30);
+    const horizonDate = dateOnly(horizon.getTime());
+    const categoryRows = new Map(
+      rows.flatMap((row) =>
+        row.categories.map(
+          (categoryRow) =>
+            [categoryRow.category.id, { ...categoryRow, person: row.person }] as const,
+        ),
+      ),
     );
-    return txs.filter(
-      (t) =>
-        t.dueDate &&
-        t.dueDate < now &&
-        !settled.has(t.categoryId) &&
-        (t.type === "lent" || t.type === "borrowed"),
-    ).length;
-  }, [rows, txs]);
+    const plansByCategory = new Map(plans.map((plan) => [plan.categoryId, plan]));
+    const overdue: DashboardPayment[] = [];
+    const upcoming: DashboardPayment[] = [];
 
-  // Upcoming payments (due within next 30 days)
-  const upcomingPayments = useMemo(() => {
-    if (!txs.length || !rows.length) return [];
-    const now = Date.now();
-    const settled = new Set(
-      rows.flatMap((r) => r.categories.filter((c) => c.balance.settled).map((c) => c.category.id)),
-    );
-    const personMap = new Map(rows.map((r) => [r.person.id, r.person]));
+    for (const plan of plans) {
+      const categoryRow = categoryRows.get(plan.categoryId);
+      if (!categoryRow || categoryRow.balance.outstanding >= -0.005) continue;
+      const categoryTransactions = txs.filter(
+        (transaction) => transaction.categoryId === plan.categoryId,
+      );
+      const schedule = getRepaymentPlanSchedule(
+        plan,
+        categoryRow.balance.outstanding,
+        categoryTransactions,
+      );
+      const schedulePayments = schedule.installments
+        .filter((installment) => installment.remainingAmount > 0.005)
+        .map((installment) => ({
+          key: plan.id + "-month-" + installment.month,
+          personId: categoryRow.person.id,
+          personName: categoryRow.person.name,
+          categoryName: categoryRow.category.name,
+          dueDate: installment.dueDate,
+          amount: installment.remainingAmount,
+          direction: "pay" as const,
+          month: installment.month,
+        }));
 
-    return txs
-      .filter(
-        (t) =>
-          t.dueDate &&
-          t.dueDate >= now &&
-          !settled.has(t.categoryId) &&
-          (t.type === "lent" || t.type === "borrowed"),
-      )
-      .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0))
-      .slice(0, 3)
-      .map((t) => ({ ...t, person: personMap.get(t.personId) }));
-  }, [txs, rows]);
+      overdue.push(...schedulePayments.filter((payment) => dateOnly(payment.dueDate) < today));
+      const nextScheduled = schedulePayments
+        .filter((payment) => dateOnly(payment.dueDate) >= today)
+        .sort((a, b) => a.dueDate - b.dueDate)[0];
+      if (nextScheduled) upcoming.push(nextScheduled);
+    }
+
+    // Preserve legacy transaction due dates for categories without a repayment plan.
+    for (const row of rows) {
+      for (const categoryRow of row.categories) {
+        if (plansByCategory.has(categoryRow.category.id)) continue;
+        const outstanding = categoryRow.balance.outstanding;
+        if (Math.abs(outstanding) < 0.005) continue;
+        const applicableType = outstanding > 0 ? "lent" : "borrowed";
+        const dueEntries = txs
+          .filter(
+            (transaction) =>
+              transaction.categoryId === categoryRow.category.id &&
+              transaction.type === applicableType &&
+              transaction.dueDate !== undefined,
+          )
+          .sort((a, b) => (a.dueDate ?? 0) - (b.dueDate ?? 0));
+        const dueEntry = dueEntries[0];
+        if (!dueEntry?.dueDate) continue;
+        const payment: DashboardPayment = {
+          key: "category-" + categoryRow.category.id,
+          personId: row.person.id,
+          personName: row.person.name,
+          categoryName: categoryRow.category.name,
+          dueDate: dueEntry.dueDate,
+          amount: Math.abs(outstanding),
+          direction: outstanding < 0 ? "pay" : "receive",
+        };
+        const dueDay = dateOnly(payment.dueDate);
+        if (dueDay < today) overdue.push(payment);
+        else if (dueDay <= horizonDate) upcoming.push(payment);
+      }
+    }
+
+    return {
+      overduePayments: overdue.sort((a, b) => a.dueDate - b.dueDate),
+      upcomingPayments: upcoming.sort((a, b) => a.dueDate - b.dueDate).slice(0, 3),
+    };
+  }, [repaymentPlans, rows, txs]);
 
   // Recent activity: last 3 transactions
   const recent = useMemo(() => {
@@ -236,14 +301,6 @@ function Dashboard() {
               {todayLabel()}
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight lg:text-3xl">{greeting()} 👋</h1>
-          </div>
-          {/* Quick Keyboard shortcuts hint */}
-          <div className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground bg-secondary/60 px-2 py-1 rounded-md">
-            <Keyboard className="h-3 w-3" />
-            <span>
-              Shortcuts: <kbd className="font-semibold">/</kbd> search,{" "}
-              <kbd className="font-semibold">N</kbd> add
-            </span>
           </div>
         </div>
 
@@ -459,20 +516,52 @@ function Dashboard() {
             </div>
 
             <div className="min-w-0 space-y-4 empty:hidden lg:col-span-5">
-              {/* Overdue alert */}
-              {overdueCount > 0 && (
-                <div className="animate-in fade-in zoom-in-95 duration-150 ease-out">
+              {/* Overdue items include their person, category, and due installment. */}
+              {overduePayments.length > 0 && (
+                <section className="space-y-2 animate-in fade-in zoom-in-95 duration-150 ease-out">
                   <Link to="/people">
                     <GlassCard className="flex items-center gap-3 border border-warning/30 p-3.5">
                       <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
                       <div className="flex-1 text-sm">
-                        <span className="font-semibold text-warning">{overdueCount} overdue</span>
+                        <span className="font-semibold text-warning">
+                          {overduePayments.length} overdue
+                        </span>
                         <span className="text-muted-foreground"> — tap to review</span>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </GlassCard>
                   </Link>
-                </div>
+                  <GlassCard className="divide-y divide-border/40 overflow-hidden p-0">
+                    {overduePayments.slice(0, 3).map((payment) => (
+                      <Link
+                        key={payment.key}
+                        to="/people/$personId"
+                        params={{ personId: payment.personId }}
+                        className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-foreground/5"
+                      >
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-warning/10">
+                          <Calendar className="h-4 w-4 text-warning" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{payment.personName}</div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {payment.categoryName}
+                            {payment.month ? " · Month " + payment.month : ""} · Due{" "}
+                            {new Date(payment.dueDate).toLocaleDateString(undefined, {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                          {payment.direction === "pay" ? "−" : "+"}
+                          {fmt(payment.amount)}
+                        </div>
+                      </Link>
+                    ))}
+                  </GlassCard>
+                </section>
               )}
 
               {/* Upcoming Payments */}
@@ -482,39 +571,34 @@ function Dashboard() {
                     Upcoming Payments
                   </p>
                   <GlassCard className="divide-y divide-border/40 overflow-hidden p-0">
-                    {upcomingPayments.map((t) => {
-                      const isLent = t.type === "lent";
-                      return (
-                        <Link
-                          key={t.id}
-                          to="/people/$personId"
-                          params={{ personId: t.personId }}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-foreground/5 transition-colors"
-                        >
-                          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-secondary/60 text-xs font-semibold">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                    {upcomingPayments.map((payment) => (
+                      <Link
+                        key={payment.key}
+                        to="/people/$personId"
+                        params={{ personId: payment.personId }}
+                        className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-foreground/5"
+                      >
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-secondary/60 text-xs font-semibold">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{payment.personName}</div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {payment.categoryName}
+                            {payment.month ? " · Month " + payment.month : ""} · Due{" "}
+                            {new Date(payment.dueDate).toLocaleDateString(undefined, {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium capitalize">
-                              {t.person?.name ?? "—"}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Due on{" "}
-                              {new Date(t.dueDate!).toLocaleDateString(undefined, {
-                                day: "numeric",
-                                month: "short",
-                              })}
-                            </div>
-                          </div>
-                          <div
-                            className={cn("text-sm font-semibold tabular-nums", "text-foreground")}
-                          >
-                            {isLent ? "+" : "−"}
-                            {fmt(t.amount)}
-                          </div>
-                        </Link>
-                      );
-                    })}
+                        </div>
+                        <div className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                          {payment.direction === "pay" ? "−" : "+"}
+                          {fmt(payment.amount)}
+                        </div>
+                      </Link>
+                    ))}
                   </GlassCard>
                 </section>
               )}

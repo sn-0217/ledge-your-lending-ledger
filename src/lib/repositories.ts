@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { queueCloudDelete, queueCloudUpsert } from "@/features/sync/cloudSync";
+import { getRepaymentPlanSchedule } from "@/lib/repaymentPlanUtils";
 import type {
   CategoryBalance,
   DebtCategory,
@@ -91,20 +92,30 @@ export async function updatePerson(id: ID, patch: Partial<Omit<Person, "id" | "c
 
 export async function deletePerson(id: ID) {
   const db = getDb();
-  const [person, categories, transactions] = await Promise.all([
+  const [person, categories, transactions, repaymentPlans] = await Promise.all([
     db.people.get(id),
     db.categories.where("personId").equals(id).toArray(),
     db.transactions.where("personId").equals(id).toArray(),
+    db.repaymentPlans.where("personId").equals(id).toArray(),
   ]);
-  await db.transaction("rw", db.people, db.categories, db.transactions, async () => {
-    await db.transactions.where("personId").equals(id).delete();
-    await db.categories.where("personId").equals(id).delete();
-    await db.people.delete(id);
-  });
+  await db.transaction(
+    "rw",
+    db.people,
+    db.categories,
+    db.transactions,
+    db.repaymentPlans,
+    async () => {
+      await db.transactions.where("personId").equals(id).delete();
+      await db.categories.where("personId").equals(id).delete();
+      await db.repaymentPlans.where("personId").equals(id).delete();
+      await db.people.delete(id);
+    },
+  );
   await Promise.all([
     ...(person ? [queueCloudDelete("people", person.id)] : []),
     ...categories.map((row) => queueCloudDelete("categories", row.id)),
     ...transactions.map((row) => queueCloudDelete("transactions", row.id)),
+    ...repaymentPlans.map((row) => queueCloudDelete("repaymentPlans", row.id)),
   ]);
 }
 
@@ -134,13 +145,18 @@ export async function renameCategory(id: ID, name: string) {
 
 export async function deleteCategory(id: ID) {
   const db = getDb();
-  const transactions = await db.transactions.where("categoryId").equals(id).toArray();
-  await db.transaction("rw", db.categories, db.transactions, async () => {
+  const [transactions, repaymentPlans] = await Promise.all([
+    db.transactions.where("categoryId").equals(id).toArray(),
+    db.repaymentPlans.where("categoryId").equals(id).toArray(),
+  ]);
+  await db.transaction("rw", db.categories, db.transactions, db.repaymentPlans, async () => {
     await db.transactions.where("categoryId").equals(id).delete();
+    await db.repaymentPlans.where("categoryId").equals(id).delete();
     await db.categories.delete(id);
   });
   await Promise.all([
     ...transactions.map((row) => queueCloudDelete("transactions", row.id)),
+    ...repaymentPlans.map((row) => queueCloudDelete("repaymentPlans", row.id)),
     queueCloudDelete("categories", id),
   ]);
 }
@@ -150,9 +166,49 @@ export async function deleteCategory(id: ID) {
 export async function createTransaction(
   input: Omit<Transaction, "id" | "createdAt" | "updatedAt">,
 ): Promise<Transaction> {
+  const db = getDb();
+  let transactionInput = input;
+  if (input.type === "repayment_out") {
+    const [category, existingTransactions] = await Promise.all([
+      db.categories.get(input.categoryId),
+      db.transactions.where("categoryId").equals(input.categoryId).toArray(),
+    ]);
+    if (!category || category.personId !== input.personId) {
+      throw new Error("Choose a valid debt category.");
+    }
+    const balance = computeCategoryBalance(category, existingTransactions).outstanding;
+    const owed = Math.max(0, -balance);
+    if (owed < 0.005) throw new Error("There is no outstanding amount to repay.");
+    if (input.amount > owed + 0.005) {
+      throw new Error("Payment cannot be greater than the remaining balance.");
+    }
+
+    const repaymentPlan = input.repaymentPlanId
+      ? await db.repaymentPlans.get(input.repaymentPlanId)
+      : await db.repaymentPlans.where("categoryId").equals(input.categoryId).first();
+    if (
+      input.repaymentPlanId &&
+      (!repaymentPlan || repaymentPlan.categoryId !== input.categoryId)
+    ) {
+      throw new Error("Choose a valid repayment plan for this category.");
+    }
+    if (repaymentPlan) {
+      const schedule = getRepaymentPlanSchedule(repaymentPlan, balance, existingTransactions);
+      const nextInstallment =
+        schedule.installments.find((installment) => installment.remainingAmount > 0.005) ??
+        schedule.installments.at(-1);
+      const selectedDueDate = input.repaymentDueDate ?? nextInstallment?.dueDate;
+      if (!selectedDueDate) throw new Error("Could not find a repayment month for this payment.");
+      transactionInput = {
+        ...input,
+        repaymentPlanId: repaymentPlan.id,
+        repaymentDueDate: selectedDueDate,
+      };
+    }
+  }
   const ts = now();
-  const tx: Transaction = { ...input, id: uid(), createdAt: ts, updatedAt: ts };
-  await getDb().transactions.add(tx);
+  const tx: Transaction = { ...transactionInput, id: uid(), createdAt: ts, updatedAt: ts };
+  await db.transactions.add(tx);
   await queueCloudUpsert("transactions", tx as unknown as Record<string, unknown>);
   return tx;
 }
@@ -162,6 +218,23 @@ export async function updateTransaction(
   patch: Partial<Omit<Transaction, "id" | "createdAt">>,
 ) {
   const db = getDb();
+  const existing = await db.transactions.get(id);
+  if (existing?.type === "repayment_out" && patch.amount !== undefined) {
+    const [category, categoryTransactions] = await Promise.all([
+      db.categories.get(existing.categoryId),
+      db.transactions.where("categoryId").equals(existing.categoryId).toArray(),
+    ]);
+    if (category) {
+      const balanceWithoutPayment = computeCategoryBalance(
+        category,
+        categoryTransactions.filter((transaction) => transaction.id !== id),
+      ).outstanding;
+      const owedWithoutPayment = Math.max(0, -balanceWithoutPayment);
+      if (patch.amount <= 0 || patch.amount > owedWithoutPayment + 0.005) {
+        throw new Error("Payment cannot be greater than the remaining balance.");
+      }
+    }
+  }
   await db.transactions.update(id, { ...patch, updatedAt: now() });
   const row = await db.transactions.get(id);
   if (row) await queueCloudUpsert("transactions", row as unknown as Record<string, unknown>);
