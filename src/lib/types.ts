@@ -124,3 +124,34 @@ export interface ChittiMonthlyPayment {
   createdAt: number;
   updatedAt: number;
 }
+
+export type LoanKind = "house" | "car" | "personal" | "other";
+export type LoanStatus = "active" | "completed" | "cancelled";
+
+/** A no-interest tracking record for a manually repaid house, car, or other loan. */
+export interface Loan {
+  id: ID;
+  name: string;
+  kind: LoanKind;
+  lender: string;
+  principalAmount: number;
+  monthlyAmount: number;
+  totalMonths: number;
+  startDate: number;
+  status: LoanStatus;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** One manually recorded payment for a loan month. */
+export interface LoanMonthlyPayment {
+  id: ID;
+  loanId: ID;
+  month: number;
+  paidAmount: number;
+  paidDate: number;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
