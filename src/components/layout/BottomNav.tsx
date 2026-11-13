@@ -1,10 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BarChart3, Home, PiggyBank, Settings, Users, WalletCards } from "lucide-react";
+import { BarChart3, Home, Landmark, PiggyBank, Settings, Users, WalletCards } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 type NavItem = {
-  to: "/" | "/people" | "/chitti" | "/analytics" | "/settings";
+  to: "/" | "/people" | "/chitti" | "/loans" | "/analytics" | "/settings";
   label: string;
   icon: typeof Home;
   exact?: boolean;
@@ -14,6 +14,7 @@ const items: NavItem[] = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/people", label: "People", icon: Users },
   { to: "/chitti", label: "Chitti", icon: PiggyBank },
+  { to: "/loans", label: "Loans", icon: Landmark },
   { to: "/analytics", label: "Insights", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

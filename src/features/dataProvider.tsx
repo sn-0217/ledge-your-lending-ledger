@@ -5,6 +5,7 @@ import { queueCloudUpsert } from "@/features/sync/cloudSync";
 import { computeCategoryBalance, computePersonBalance } from "@/lib/repositories";
 import * as peopleRepo from "@/lib/repositories";
 import * as chittiRepo from "@/lib/chittiRepositories";
+import * as loanRepo from "@/lib/loanRepositories";
 import type {
   Person,
   DebtCategory,
@@ -14,6 +15,9 @@ import type {
   TransactionType,
   ChittiStatus,
   ChittiAvailedSlot,
+  Loan,
+  LoanMonthlyPayment,
+  LoanStatus,
 } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -21,7 +25,8 @@ import { toast } from "sonner";
 type DeletedItem =
   | { type: "transaction"; data: Transaction }
   | { type: "person"; data: Person; categories: DebtCategory[]; transactions: Transaction[] }
-  | { type: "chitti"; data: Chitti; payments: ChittiMonthlyPayment[] };
+  | { type: "chitti"; data: Chitti; payments: ChittiMonthlyPayment[] }
+  | { type: "loan"; data: Loan; payments: LoanMonthlyPayment[] };
 
 export interface PersonRow {
   person: Person;
@@ -35,6 +40,8 @@ interface DataContextType {
   transactions: Transaction[];
   chittis: Chitti[];
   chittiPayments: ChittiMonthlyPayment[];
+  loans: Loan[];
+  loanPayments: LoanMonthlyPayment[];
   personRows: PersonRow[];
   isLoading: boolean;
 
@@ -78,6 +85,20 @@ interface DataContextType {
     notes?: string,
   ) => Promise<void>;
   deletePayment: (chittiId: string, month: number) => Promise<void>;
+
+  // Loan Mutations
+  createLoan: (input: loanRepo.NewLoan) => Promise<string>;
+  updateLoan: (id: string, patch: Partial<Omit<Loan, "id" | "createdAt">>) => Promise<void>;
+  updateLoanStatus: (id: string, status: LoanStatus) => Promise<void>;
+  deleteLoan: (id: string) => Promise<void>;
+  recordLoanPayment: (
+    loanId: string,
+    month: number,
+    paidAmount: number,
+    paidDate: number,
+    notes?: string,
+  ) => Promise<void>;
+  deleteLoanPayment: (loanId: string, month: number) => Promise<void>;
 
   // Undo delete status
   hasUndo: boolean;
@@ -136,6 +157,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     placeholderData: (prev) => prev,
   });
 
+  const { data: loans = [], isLoading: loadingLoans } = useQuery({
+    queryKey: ["loans"],
+    queryFn: async () => getDb().loans.orderBy("createdAt").reverse().toArray(),
+    placeholderData: (prev) => prev,
+  });
+
+  const { data: loanPayments = [], isLoading: loadingLoanPayments } = useQuery({
+    queryKey: ["loanPayments"],
+    queryFn: async () => getDb().loanPayments.toArray(),
+    placeholderData: (prev) => prev,
+  });
+
   // Derived personRows (computed using useMemo to avoid recalculation lags)
   const personRows = useMemo<PersonRow[]>(() => {
     if (!people.length) return [];
@@ -165,7 +198,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [people, categories, transactions]);
 
   const isLoading =
-    loadingPeople || loadingCategories || loadingTransactions || loadingChittis || loadingPayments;
+    loadingPeople ||
+    loadingCategories ||
+    loadingTransactions ||
+    loadingChittis ||
+    loadingPayments ||
+    loadingLoans ||
+    loadingLoanPayments;
 
   // --- Mutators using useMutation ---
 
@@ -179,7 +218,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const updatePersonMutation = useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: any }) => peopleRepo.updatePerson(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<Omit<Person, "id" | "createdAt">> }) =>
+      peopleRepo.updatePerson(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["people"] });
     },
@@ -226,8 +266,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const updateTransactionMutation = useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: any }) =>
-      peopleRepo.updateTransaction(id, patch),
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Partial<Omit<Transaction, "id" | "createdAt">>;
+    }) => peopleRepo.updateTransaction(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
@@ -302,7 +347,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const updateChittiMutation = useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: any }) => chittiRepo.updateChitti(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<Omit<Chitti, "id" | "createdAt">> }) =>
+      chittiRepo.updateChitti(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chittis"] });
     },
@@ -362,6 +408,66 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  // 6. Loans and monthly payments
+  const createLoanMutation = useMutation({
+    mutationFn: loanRepo.createLoan,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["loans"] }),
+  });
+
+  const updateLoanMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<Omit<Loan, "id" | "createdAt">> }) =>
+      loanRepo.updateLoan(id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["loans"] }),
+  });
+
+  const updateLoanStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: LoanStatus }) =>
+      loanRepo.updateLoanStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["loans"] }),
+  });
+
+  const deleteLoanMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const db = getDb();
+      const loan = await db.loans.get(id);
+      if (loan) {
+        const payments = await db.loanPayments.where("loanId").equals(id).toArray();
+        setLastDeleted({ type: "loan", data: loan, payments });
+      }
+      await loanRepo.deleteLoan(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loans"] });
+      queryClient.invalidateQueries({ queryKey: ["loanPayments"] });
+      toast.success("Loan deleted", {
+        action: { label: "Undo", onClick: () => triggerUndo() },
+      });
+    },
+  });
+
+  const recordLoanPaymentMutation = useMutation({
+    mutationFn: ({
+      loanId,
+      month,
+      paidAmount,
+      paidDate,
+      notes,
+    }: {
+      loanId: string;
+      month: number;
+      paidAmount: number;
+      paidDate: number;
+      notes?: string;
+    }) => loanRepo.recordLoanPayment(loanId, month, paidAmount, paidDate, notes),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["loanPayments"] }),
+  });
+
+  const deleteLoanPaymentMutation = useMutation({
+    mutationFn: ({ loanId, month }: { loanId: string; month: number }) =>
+      loanRepo.deleteLoanPayment(loanId, month),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["loanPayments"] }),
+  });
+
   // Undo Delete trigger
   async function triggerUndo() {
     if (!lastDeleted) return;
@@ -407,6 +513,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           );
         }
         toast.success(`Restored Chitti "${lastDeleted.data.name || "Chitti"}"`);
+      } else if (lastDeleted.type === "loan") {
+        await db.loans.add(lastDeleted.data);
+        await queueCloudUpsert("loans", lastDeleted.data as unknown as Record<string, unknown>);
+        if (lastDeleted.payments.length) {
+          await db.loanPayments.bulkAdd(lastDeleted.payments);
+          await Promise.all(
+            lastDeleted.payments.map((row) =>
+              queueCloudUpsert("loanPayments", row as unknown as Record<string, unknown>),
+            ),
+          );
+        }
+        toast.success(`Restored loan "${lastDeleted.data.name}"`);
       }
 
       // Invalidate all queries to show restored item
@@ -424,6 +542,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       transactions,
       chittis,
       chittiPayments,
+      loans,
+      loanPayments,
       personRows,
       isLoading,
 
@@ -449,10 +569,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         recordPaymentMutation.mutateAsync({ chittiId, month, paidAmount, paidDate, notes }),
       deletePayment: (chittiId, month) => deletePaymentMutation.mutateAsync({ chittiId, month }),
 
+      createLoan: (input) => createLoanMutation.mutateAsync(input),
+      updateLoan: (id, patch) => updateLoanMutation.mutateAsync({ id, patch }),
+      updateLoanStatus: (id, status) => updateLoanStatusMutation.mutateAsync({ id, status }),
+      deleteLoan: (id) => deleteLoanMutation.mutateAsync(id),
+      recordLoanPayment: (loanId, month, paidAmount, paidDate, notes) =>
+        recordLoanPaymentMutation.mutateAsync({ loanId, month, paidAmount, paidDate, notes }),
+      deleteLoanPayment: (loanId, month) =>
+        deleteLoanPaymentMutation.mutateAsync({ loanId, month }),
+
       hasUndo: lastDeleted !== null,
       triggerUndo,
     }),
-    [people, categories, transactions, chittis, chittiPayments, personRows, isLoading, lastDeleted],
+    [
+      people,
+      categories,
+      transactions,
+      chittis,
+      chittiPayments,
+      loans,
+      loanPayments,
+      personRows,
+      isLoading,
+      lastDeleted,
+    ],
   );
 
   return <DataContext.Provider value={contextValue}>{children}</DataContext.Provider>;

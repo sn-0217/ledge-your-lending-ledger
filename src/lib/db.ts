@@ -3,6 +3,8 @@ import type {
   Chitti,
   ChittiMonthlyPayment,
   DebtCategory,
+  Loan,
+  LoanMonthlyPayment,
   Person,
   RepaymentPlan,
   Transaction,
@@ -15,6 +17,8 @@ export const LEDGE_COLLECTIONS = [
   "chittis",
   "chittiPayments",
   "repaymentPlans",
+  "loans",
+  "loanPayments",
 ] as const;
 
 export type LedgeCollection = (typeof LEDGE_COLLECTIONS)[number];
@@ -35,6 +39,8 @@ class LedgeDB extends Dexie {
   chittis!: Table<Chitti, string>;
   chittiPayments!: Table<ChittiMonthlyPayment, string>;
   repaymentPlans!: Table<RepaymentPlan, string>;
+  loans!: Table<Loan, string>;
+  loanPayments!: Table<LoanMonthlyPayment, string>;
   syncOutbox!: Table<SyncOutboxEntry, [string, string, string]>;
 
   constructor(name: string) {
@@ -78,6 +84,17 @@ class LedgeDB extends Dexie {
       syncOutbox: "[ownerId+collection+recordId], ownerId, changedAt",
       repaymentPlans: "id, personId, categoryId, firstDueDate, createdAt, updatedAt",
     });
+    this.version(6).stores({
+      people: "id, name, createdAt, updatedAt",
+      categories: "id, personId, name, createdAt",
+      transactions: "id, personId, categoryId, repaymentPlanId, type, date, dueDate, createdAt",
+      chittis: "id, organizerId, status, createdAt, updatedAt",
+      chittiPayments: "id, chittiId, month, [chittiId+month]",
+      syncOutbox: "[ownerId+collection+recordId], ownerId, changedAt",
+      repaymentPlans: "id, personId, categoryId, firstDueDate, createdAt, updatedAt",
+      loans: "id, kind, status, startDate, createdAt, updatedAt",
+      loanPayments: "id, loanId, month, [loanId+month]",
+    });
   }
 }
 
@@ -118,6 +135,8 @@ export async function migrateLegacyLocalDatabase(userId: string) {
     legacyChittis,
     legacyPayments,
     legacyRepaymentPlans,
+    legacyLoans,
+    legacyLoanPayments,
   ] = await Promise.all([
     legacy.people.toArray(),
     legacy.categories.toArray(),
@@ -125,6 +144,8 @@ export async function migrateLegacyLocalDatabase(userId: string) {
     legacy.chittis.toArray(),
     legacy.chittiPayments.toArray(),
     legacy.repaymentPlans.toArray(),
+    legacy.loans.toArray(),
+    legacy.loanPayments.toArray(),
   ]);
   const localRecords = [
     ...legacyPeople,
@@ -133,6 +154,8 @@ export async function migrateLegacyLocalDatabase(userId: string) {
     ...legacyChittis,
     ...legacyPayments,
     ...legacyRepaymentPlans,
+    ...legacyLoans,
+    ...legacyLoanPayments,
   ];
   if (localRecords.length === 0) return;
 
@@ -143,6 +166,8 @@ export async function migrateLegacyLocalDatabase(userId: string) {
     accountDb.chittis.count(),
     accountDb.chittiPayments.count(),
     accountDb.repaymentPlans.count(),
+    accountDb.loans.count(),
+    accountDb.loanPayments.count(),
   ]).then((counts) => counts.reduce((total, count) => total + count, 0));
 
   if (accountRecordCount === 0) {
@@ -155,6 +180,8 @@ export async function migrateLegacyLocalDatabase(userId: string) {
         accountDb.chittis,
         accountDb.chittiPayments,
         accountDb.repaymentPlans,
+        accountDb.loans,
+        accountDb.loanPayments,
       ],
       async () => {
         if (legacyPeople.length) await accountDb.people.bulkPut(legacyPeople);
@@ -164,6 +191,8 @@ export async function migrateLegacyLocalDatabase(userId: string) {
         if (legacyPayments.length) await accountDb.chittiPayments.bulkPut(legacyPayments);
         if (legacyRepaymentPlans.length)
           await accountDb.repaymentPlans.bulkPut(legacyRepaymentPlans);
+        if (legacyLoans.length) await accountDb.loans.bulkPut(legacyLoans);
+        if (legacyLoanPayments.length) await accountDb.loanPayments.bulkPut(legacyLoanPayments);
       },
     );
   }

@@ -97,6 +97,8 @@ async function readLocalRecords(): Promise<SyncCandidate[]> {
     db.chittis,
     db.chittiPayments,
     db.repaymentPlans,
+    db.loans,
+    db.loanPayments,
   ];
   for (const table of tables) {
     const collection = collectionForTable(table.name);
@@ -222,6 +224,14 @@ async function applyLocalCandidate(candidate: SyncCandidate) {
     case "repaymentPlans":
       if (candidate.deleted || !record) await db.repaymentPlans.delete(candidate.recordId);
       else await db.repaymentPlans.put(record as never);
+      break;
+    case "loans":
+      if (candidate.deleted || !record) await db.loans.delete(candidate.recordId);
+      else await db.loans.put(record as never);
+      break;
+    case "loanPayments":
+      if (candidate.deleted || !record) await db.loanPayments.delete(candidate.recordId);
+      else await db.loanPayments.put(record as never);
       break;
   }
 }

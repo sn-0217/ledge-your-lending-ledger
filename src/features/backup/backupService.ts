@@ -7,6 +7,8 @@ import type {
   Transaction,
   Chitti,
   ChittiMonthlyPayment,
+  Loan,
+  LoanMonthlyPayment,
   RepaymentPlan,
 } from "@/lib/types";
 
@@ -20,6 +22,8 @@ export interface BackupData {
   chittis: Chitti[];
   chittiPayments: ChittiMonthlyPayment[];
   repaymentPlans: RepaymentPlan[];
+  loans: Loan[];
+  loanPayments: LoanMonthlyPayment[];
 }
 
 export function validateAndMigrateBackup(data: unknown): BackupData {
@@ -51,6 +55,10 @@ export function validateAndMigrateBackup(data: unknown): BackupData {
     : [];
   const repaymentPlans: RepaymentPlan[] = Array.isArray(backup.repaymentPlans)
     ? (backup.repaymentPlans as RepaymentPlan[])
+    : [];
+  const loans: Loan[] = Array.isArray(backup.loans) ? (backup.loans as Loan[]) : [];
+  const loanPayments: LoanMonthlyPayment[] = Array.isArray(backup.loanPayments)
+    ? (backup.loanPayments as LoanMonthlyPayment[])
     : [];
 
   // 1. Validate People
@@ -176,9 +184,58 @@ export function validateAndMigrateBackup(data: unknown): BackupData {
     if (!plan.updatedAt) plan.updatedAt = plan.createdAt;
   }
 
+  for (const loan of loans) {
+    if (!loan.id || typeof loan.id !== "string")
+      throw new Error("Validation failed: Loan missing string id.");
+    if (!loan.name || typeof loan.name !== "string")
+      throw new Error("Validation failed: Loan missing name.");
+    if (!loan.lender || typeof loan.lender !== "string")
+      throw new Error("Validation failed: Loan missing lender.");
+    if (!["house", "car", "personal", "other"].includes(loan.kind))
+      throw new Error("Validation failed: Loan type is invalid.");
+    if (
+      typeof loan.principalAmount !== "number" ||
+      !Number.isFinite(loan.principalAmount) ||
+      loan.principalAmount <= 0
+    )
+      throw new Error("Validation failed: Loan amount is invalid.");
+    if (
+      typeof loan.monthlyAmount !== "number" ||
+      !Number.isFinite(loan.monthlyAmount) ||
+      loan.monthlyAmount <= 0
+    )
+      throw new Error("Validation failed: Loan monthly amount is invalid.");
+    if (!Number.isInteger(loan.totalMonths) || loan.totalMonths < 1 || loan.totalMonths > 600)
+      throw new Error("Validation failed: Loan duration is invalid.");
+    if (typeof loan.startDate !== "number" || !Number.isFinite(loan.startDate))
+      throw new Error("Validation failed: Loan start date is invalid.");
+    if (!loan.status || !["active", "completed", "cancelled"].includes(loan.status))
+      loan.status = "active";
+    if (!loan.createdAt) loan.createdAt = Date.now();
+    if (!loan.updatedAt) loan.updatedAt = loan.createdAt;
+  }
+
+  for (const payment of loanPayments) {
+    if (!payment.id || typeof payment.id !== "string")
+      throw new Error("Validation failed: Loan payment missing string id.");
+    if (!payment.loanId || typeof payment.loanId !== "string")
+      throw new Error("Validation failed: Loan payment missing loanId.");
+    if (!Number.isInteger(payment.month) || payment.month < 1)
+      throw new Error("Validation failed: Loan payment month is invalid.");
+    if (
+      typeof payment.paidAmount !== "number" ||
+      !Number.isFinite(payment.paidAmount) ||
+      payment.paidAmount <= 0
+    )
+      throw new Error("Validation failed: Loan payment amount is invalid.");
+    if (!payment.paidDate) payment.paidDate = Date.now();
+    if (!payment.createdAt) payment.createdAt = payment.paidDate;
+    if (!payment.updatedAt) payment.updatedAt = payment.createdAt;
+  }
+
   return {
     app: "ledge",
-    version: 4,
+    version: 5,
     exportedAt: new Date().toISOString(),
     people,
     categories,
@@ -186,6 +243,8 @@ export function validateAndMigrateBackup(data: unknown): BackupData {
     chittis,
     chittiPayments,
     repaymentPlans,
+    loans,
+    loanPayments,
   };
 }
 
@@ -193,16 +252,35 @@ export async function getDatabaseBackupPayload(): Promise<
   Omit<BackupData, "app" | "version" | "exportedAt">
 > {
   const db = getDb();
-  const [people, categories, transactions, chittis, chittiPayments, repaymentPlans] =
-    await Promise.all([
-      db.people.toArray(),
-      db.categories.toArray(),
-      db.transactions.toArray(),
-      db.chittis.toArray(),
-      db.chittiPayments.toArray(),
-      db.repaymentPlans.toArray(),
-    ]);
-  return { people, categories, transactions, chittis, chittiPayments, repaymentPlans };
+  const [
+    people,
+    categories,
+    transactions,
+    chittis,
+    chittiPayments,
+    repaymentPlans,
+    loans,
+    loanPayments,
+  ] = await Promise.all([
+    db.people.toArray(),
+    db.categories.toArray(),
+    db.transactions.toArray(),
+    db.chittis.toArray(),
+    db.chittiPayments.toArray(),
+    db.repaymentPlans.toArray(),
+    db.loans.toArray(),
+    db.loanPayments.toArray(),
+  ]);
+  return {
+    people,
+    categories,
+    transactions,
+    chittis,
+    chittiPayments,
+    repaymentPlans,
+    loans,
+    loanPayments,
+  };
 }
 
 export async function importBackupPayload(payload: unknown) {
@@ -215,11 +293,22 @@ export async function importBackupPayload(payload: unknown) {
     db.chittis.toArray(),
     db.chittiPayments.toArray(),
     db.repaymentPlans.toArray(),
+    db.loans.toArray(),
+    db.loanPayments.toArray(),
   ]);
 
   await db.transaction(
     "rw",
-    [db.people, db.categories, db.transactions, db.chittis, db.chittiPayments, db.repaymentPlans],
+    [
+      db.people,
+      db.categories,
+      db.transactions,
+      db.chittis,
+      db.chittiPayments,
+      db.repaymentPlans,
+      db.loans,
+      db.loanPayments,
+    ],
     async () => {
       // Clear current database values
       await Promise.all([
@@ -229,6 +318,8 @@ export async function importBackupPayload(payload: unknown) {
         db.chittis.clear(),
         db.chittiPayments.clear(),
         db.repaymentPlans.clear(),
+        db.loans.clear(),
+        db.loanPayments.clear(),
       ]);
 
       // Bulk write values
@@ -240,6 +331,8 @@ export async function importBackupPayload(payload: unknown) {
         await db.chittiPayments.bulkAdd(validated.chittiPayments);
       if (validated.repaymentPlans.length > 0)
         await db.repaymentPlans.bulkAdd(validated.repaymentPlans);
+      if (validated.loans.length > 0) await db.loans.bulkAdd(validated.loans);
+      if (validated.loanPayments.length > 0) await db.loanPayments.bulkAdd(validated.loanPayments);
     },
   );
 
@@ -250,6 +343,8 @@ export async function importBackupPayload(payload: unknown) {
     validated.chittis,
     validated.chittiPayments,
     validated.repaymentPlans,
+    validated.loans,
+    validated.loanPayments,
   ];
   await Promise.all(
     LEDGE_COLLECTIONS.flatMap((collection, index) => [

@@ -21,6 +21,7 @@ import {
   Layers,
   Coins,
   XCircle,
+  Landmark,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -77,7 +78,7 @@ interface DashboardPayment {
 }
 
 function Dashboard() {
-  const { personRows: rows, transactions: txs, chittis, isLoading } = useLedge();
+  const { personRows: rows, transactions: txs, chittis, loans, isLoading } = useLedge();
   const repaymentPlans = useLiveQuery(() => getDb().repaymentPlans.toArray(), []);
   const fmt = useFormatMoney();
   const [searchQuery, setSearchQuery] = useState("");
@@ -278,12 +279,20 @@ function Dashboard() {
         return { ...c, organizer: p };
       });
 
+    const loanResult = loans.filter(
+      (loan) =>
+        loan.name.toLowerCase().includes(q) ||
+        loan.lender.toLowerCase().includes(q) ||
+        loan.kind.toLowerCase().includes(q),
+    );
+
     return {
       people: peopleResult,
       transactions: txResult,
       chittis: chittiResult,
+      loans: loanResult,
     };
-  }, [searchQuery, rows, txs, chittis]);
+  }, [searchQuery, rows, txs, chittis, loans]);
 
   if (isLoading) return <DashboardSkeleton />;
   if (rows.length === 0) return <EmptyState />;
@@ -416,9 +425,38 @@ function Dashboard() {
               </GlassCard>
             )}
 
+            {searchResults.loans.length > 0 && (
+              <GlassCard className="space-y-2 p-3">
+                <div className="flex items-center gap-1.5 border-b border-border/50 pb-1 text-xs text-muted-foreground">
+                  <Landmark className="h-3.5 w-3.5" /> Loans
+                </div>
+                <div className="divide-y divide-border/50">
+                  {searchResults.loans.map((loan) => (
+                    <Link
+                      key={loan.id}
+                      to="/loans/$loanId"
+                      params={{ loanId: loan.id }}
+                      className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-1 last:pb-1"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{loan.name}</div>
+                        <div className="truncate text-[11px] capitalize text-muted-foreground">
+                          {loan.kind} · {loan.lender}
+                        </div>
+                      </div>
+                      <span className="shrink-0 font-semibold text-primary">
+                        {fmt(loan.monthlyAmount)}/mo
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </GlassCard>
+            )}
+
             {searchResults.people.length === 0 &&
               searchResults.transactions.length === 0 &&
-              searchResults.chittis.length === 0 && (
+              searchResults.chittis.length === 0 &&
+              searchResults.loans.length === 0 && (
                 <GlassCard className="p-8 text-center text-sm text-muted-foreground">
                   No matching records found for "{searchQuery}".
                 </GlassCard>
