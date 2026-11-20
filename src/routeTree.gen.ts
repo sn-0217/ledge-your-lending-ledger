@@ -9,29 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as PeopleRouteImport } from './routes/people'
-import { Route as ChittiRouteImport } from './routes/chitti'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PeopleIndexRouteImport } from './routes/people.index'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as ChittiRouteImport } from './routes/chitti'
+import { Route as PeopleRouteImport } from './routes/people'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ChittiIndexRouteImport } from './routes/chitti.index'
-import { Route as PeoplePersonIdRouteImport } from './routes/people.$personId'
 import { Route as ChittiChittiIdRouteImport } from './routes/chitti.$chittiId'
+import { Route as PeopleIndexRouteImport } from './routes/people.index'
+import { Route as PeoplePersonIdRouteImport } from './routes/people.$personId'
 
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PeopleRoute = PeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChittiRoute = ChittiRouteImport.update({
-  id: '/chitti',
-  path: '/chitti',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
@@ -39,30 +29,40 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ChittiRoute = ChittiRouteImport.update({
+  id: '/chitti',
+  path: '/chitti',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PeopleIndexRoute = PeopleIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => PeopleRoute,
+const PeopleRoute = PeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ChittiIndexRoute = ChittiIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ChittiRoute,
 } as any)
-const PeoplePersonIdRoute = PeoplePersonIdRouteImport.update({
-  id: '/$personId',
-  path: '/$personId',
-  getParentRoute: () => PeopleRoute,
-} as any)
 const ChittiChittiIdRoute = ChittiChittiIdRouteImport.update({
   id: '/$chittiId',
   path: '/$chittiId',
   getParentRoute: () => ChittiRoute,
+} as any)
+const PeopleIndexRoute = PeopleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PeopleRoute,
+} as any)
+const PeoplePersonIdRoute = PeoplePersonIdRouteImport.update({
+  id: '/$personId',
+  path: '/$personId',
+  getParentRoute: () => PeopleRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -141,25 +141,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/people': {
-      id: '/people'
-      path: '/people'
-      fullPath: '/people'
-      preLoaderRoute: typeof PeopleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/chitti': {
-      id: '/chitti'
-      path: '/chitti'
-      fullPath: '/chitti'
-      preLoaderRoute: typeof ChittiRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics': {
@@ -169,19 +155,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/chitti': {
+      id: '/chitti'
+      path: '/chitti'
+      fullPath: '/chitti'
+      preLoaderRoute: typeof ChittiRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/people/': {
-      id: '/people/'
-      path: '/'
-      fullPath: '/people/'
-      preLoaderRoute: typeof PeopleIndexRouteImport
-      parentRoute: typeof PeopleRoute
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/chitti/': {
       id: '/chitti/'
@@ -190,19 +183,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChittiIndexRouteImport
       parentRoute: typeof ChittiRoute
     }
-    '/people/$personId': {
-      id: '/people/$personId'
-      path: '/$personId'
-      fullPath: '/people/$personId'
-      preLoaderRoute: typeof PeoplePersonIdRouteImport
-      parentRoute: typeof PeopleRoute
-    }
     '/chitti/$chittiId': {
       id: '/chitti/$chittiId'
       path: '/$chittiId'
       fullPath: '/chitti/$chittiId'
       preLoaderRoute: typeof ChittiChittiIdRouteImport
       parentRoute: typeof ChittiRoute
+    }
+    '/people/': {
+      id: '/people/'
+      path: '/'
+      fullPath: '/people/'
+      preLoaderRoute: typeof PeopleIndexRouteImport
+      parentRoute: typeof PeopleRoute
+    }
+    '/people/$personId': {
+      id: '/people/$personId'
+      path: '/$personId'
+      fullPath: '/people/$personId'
+      preLoaderRoute: typeof PeoplePersonIdRouteImport
+      parentRoute: typeof PeopleRoute
     }
   }
 }
